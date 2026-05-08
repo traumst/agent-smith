@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"smithai/internal/agent/protocol"
-	"smithai/internal/persistence/db"
-	"smithai/internal/persistence/history"
-	"smithai/internal/persistence/logs"
-	"smithai/internal/persistence/memory"
-	"smithai/internal/persistence/refs"
-	"smithai/internal/persistence/settings"
-	"smithai/internal/persistence/vector"
+	"smithai/src/agent/protocol"
+	"smithai/src/persistence/db"
+	"smithai/src/persistence/history"
+	"smithai/src/persistence/logs"
+	"smithai/src/persistence/memory"
+	"smithai/src/persistence/refs"
+	"smithai/src/persistence/settings"
+	"smithai/src/persistence/vector"
 )
 
 func main() {

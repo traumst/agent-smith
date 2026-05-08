@@ -5,7 +5,7 @@ smithai/
 ├── cmd/
 │   └── smith/
 │       └── main.go           # Entry point. Wires up dependencies, starts servers, and hosts the Phase 2 smoke test.
-├── internal/
+├── src/
 │   ├── persistence/          # Persistence Layer: SQLite, files, memory, settings, logs
 │   │   ├── db/               # SQLite setup, migrations, extension loading (sqlite-vec)
 │   │   ├── vector/           # Vector DB implementation via sqlite-vec for keyword-based memory lookups
@@ -35,7 +35,7 @@ smithai/
 
 ### Layer Separation
 
-1. **Persistence Layer (`internal/persistence`)**: Exclusively handles disk and database operations. Isolated from the agent's logic. SQLite for structured data, plaintext files for long-term memory.
-2. **Agent Layer (`internal/agent`)**: The core brain. Contains all protocol definitions, context window management, token estimation, and tool routing. Completely decoupled from HTTP or UI.
-3. **API Layer (`internal/api`)**: Bridges the Agent Layer to the outside world via HTTP and Server-Sent Events (SSE).
-4. **UI Layer (`internal/ui`)**: Purely presentational. Consumes the API Layer via HTMX and dynamic Go templates. Static assets embedded into the binary via Go `embed`.
+1. **Persistence Layer (`src/persistence`)**: Exclusively handles disk and database operations. Isolated from the agent's logic. SQLite for structured data, plaintext files for long-term memory.
+2. **Agent Layer (`src/agent`)**: The core brain. Contains all protocol definitions, context window management, token estimation, and tool routing. Completely decoupled from HTTP or UI.
+3. **API Layer (`src/api`)**: Bridges the Agent Layer to the outside world via HTTP and Server-Sent Events (SSE).
+4. **UI Layer (`src/ui`)**: Purely presentational. Consumes the API Layer via HTMX and dynamic Go templates. Static assets embedded into the binary via Go `embed`.

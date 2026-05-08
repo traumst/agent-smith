@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"smithai/internal/agent/protocol"
+	"smithai/src/agent/protocol"
 )
 
 // CreateTable initializes the chat_history table.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"smithai/internal/agent/protocol"
+	"smithai/src/agent/protocol"
 )
 
 // Settings encapsulates the overall configuration for the agent.

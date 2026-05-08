@@ -16,15 +16,15 @@ All other functionality must use the Go standard library.
 
 **Goal:** Establish the project structure, configuration, storage, and protocol types.
 
-1. **Initialize Project:** Create `go.mod` (module `smithai`) and the initial folder structure (`cmd/`, `internal/`).
-2. **Settings Management:** Implement `internal/persistence/settings`. Create configuration structs passed explicitly (no globals). Define the system prompt structure (Competence, Mood, Instructions). Settings are stored as JSON on disk. The agent cannot modify settings — only the user can, including editing files directly outside the agent. Changes must be reflected immediately on next read.
+1. **Initialize Project:** Create `go.mod` (module `smithai`) and the initial folder structure (`cmd/`, `src/`).
+2. **Settings Management:** Implement `src/persistence/settings`. Create configuration structs passed explicitly (no globals). Define the system prompt structure (Competence, Mood, Instructions). Settings are stored as JSON on disk. The agent cannot modify settings — only the user can, including editing files directly outside the agent. Changes must be reflected immediately on next read.
 3. **Storage Setup:** Set up the SQLite database via `mattn/go-sqlite3` with extension loading enabled. Implement schema and access for:
-   - `chat_history` — conversation history storage (`internal/persistence/history`)
-   - `usage_logs` — usage log entries (`internal/persistence/logs`)
-   - `references` — reference entries pointing to local files or web URLs, stored as rows in a `references` table (`internal/persistence/refs`)
-4. **Vector DB:** Design and implement `internal/persistence/vector` using the `sqlite-vec` extension in tandem with the rest of the persistence layer. This powers keyword-based lookups into long-term memory files.
+   - `chat_history` — conversation history storage (`src/persistence/history`)
+   - `usage_logs` — usage log entries (`src/persistence/logs`)
+   - `references` — reference entries pointing to local files or web URLs, stored as rows in a `references` table (`src/persistence/refs`)
+4. **Vector DB:** Design and implement `src/persistence/vector` using the `sqlite-vec` extension in tandem with the rest of the persistence layer. This powers keyword-based lookups into long-term memory files.
 5. **Long-Term Memory:** Long-term memory is stored as plaintext files on disk (in the `data/memory/` directory, size-capped and configurable). Each memory file is registered in the `references` table. Keywords from each file are extracted and vectorized in the vector DB for fast retrieval. Memory files can be browsed and edited by the user directly.
-6. **Protocol Definitions:** Define request and response types in `internal/agent/protocol`:
+6. **Protocol Definitions:** Define request and response types in `src/agent/protocol`:
 
    **Request:**
    | Field | Type | Description |
@@ -61,9 +61,9 @@ All other functionality must use the Go standard library.
 
 **Goal:** Implement the core reasoning loop and the ability to talk to an LLM.
 
-1. **Provider Adapters:** Implement `internal/agent/adapter` for a primary provider (e.g., OpenAI or Anthropic API formats). Ensure the adapter can handle streaming Server-Sent Events from the model.
+1. **Provider Adapters:** Implement `src/agent/adapter` for a primary provider (e.g., OpenAI or Anthropic API formats). Ensure the adapter can handle streaming Server-Sent Events from the model.
 2. **Token Estimation:** Implement token counting and context window awareness in the agent layer (near the adapter, which knows the tokenizer). The protocol types carry a `TokensUsed` field; the counting logic lives here.
-3. **Thinking Loop:** Implement `internal/agent/loop` to manage the request/response cycle. Error handling strategy:
+3. **Thinking Loop:** Implement `src/agent/loop` to manage the request/response cycle. Error handling strategy:
    - **User STOP or timeout:** Circuit breaker — abort immediately, return partial result.
    - **Transient API errors (rate limits, 5xx, network):** Exponential backoff, retry up to 3 times, then fail with clear error message.
    - **Unrecoverable errors (auth, malformed request):** Fail fast, return error immediately.
@@ -84,7 +84,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Expose the agent via a robust HTTP API.
 
-1. **Middleware:** Add standard logging, timeout, and panic recovery middleware (`internal/api/middleware`).
+1. **Middleware:** Add standard logging, timeout, and panic recovery middleware (`src/api/middleware`).
 2. **Handlers:** Implement REST endpoints for settings/history and SSE endpoints for streaming chat responses and thoughts.
 3. **Integration:** Wire the Agent Layer to the API Layer in `main.go` and ensure it runs functionally as a headless HTTP server.
 
@@ -92,7 +92,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Build the interactive web frontend without complex build steps.
 
-1. **Template Setup:** Create base Go HTML templates (`internal/ui/templates`) and link Vanilla CSS/JS (`internal/ui/static`). Use Go `embed` directive to bundle static assets into the binary.
+1. **Template Setup:** Create base Go HTML templates (`src/ui/templates`) and link Vanilla CSS/JS (`src/ui/static`). Use Go `embed` directive to bundle static assets into the binary.
 2. **HTMX Integration:** Vendor HTMX (latest stable from CDN, bundled into `static/`). Use HTMX to submit chat forms and consume the SSE stream from the API layer natively.
 3. **Interactivity:** Add simple, modern visual cues: highlight on hover/click/fail, and Vanilla JS toasters to confirm success or inform of issues.
 4. **Consent UI:** Replace the headless stdin/stdout consent prompts from Phase 3 with proper UI dialogs for the "pause and consent" workflow.
