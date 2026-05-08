@@ -11,6 +11,7 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 1. **`mattn/go-sqlite3`** (CGO) — Go has no built-in SQLite support. CGO is acceptable for our use case: we ship a compiled binary, serve a web UI, and have no WASM targets. Provides extension loading required for `sqlite-vec`.
 2. **`sqlite-vec`** — Lightweight SQLite extension for vector similarity search. Loaded at runtime via `mattn/go-sqlite3`. Powers keyword-based lookups into long-term memory files without introducing a separate vector database.
 3. **`chromedp`** (`github.com/chromedp/chromedp`) — Pure Go Chrome DevTools Protocol client. Used for two purposes: (a) the agent's web browser tool, allowing interaction with full web pages, and (b) simulation/end-to-end tests against the SmithAI web UI. Communicates directly with a local Chrome/Chromium installation — no external driver binaries.
+4. **`google.golang.org/genai`** — Official Gemini Go SDK for native integration with the Gemini API.
 
 ## UI Layer
 
@@ -45,6 +46,6 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 
 This stack guarantees the project requirements are met:
 
-1. **Minimal External Dependencies**: Only three approved exceptions, each with clear justification. Promotes stability, security, and clean code.
+1. **Minimal External Dependencies**: Only four approved exceptions, each with clear justification. Promotes stability, security, and clean code.
 2. **Versatility**: The core logic resides in pure Go packages (`src/agent`) fully decoupled from the API or UI. The module is `smithai` — importable directly for IDE/TUI integration.
 3. **Configurability**: Go's struct-based architecture makes it easy to pass settings down explicitly instead of relying on globals or environment variables scattered everywhere.

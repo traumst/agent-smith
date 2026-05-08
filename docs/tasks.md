@@ -36,8 +36,8 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 2.1: Provider Adapter & Token Estimation
 
-- [ ] Implement `src/agent/adapter` for a primary API provider (e.g., OpenAI or Anthropic).
-- [ ] Implement Server-Sent Events (SSE) parsing for streaming responses from the provider.
+- [ ] Implement `src/agent/adapter` for the Gemini API using `google.golang.org/genai`.
+- [ ] Implement streaming responses from the Gemini provider using the SDK's streaming capabilities.
 - [ ] Implement token estimation logic in the agent layer to track `TokensUsed` (accounting for system prompt overhead).
 - [ ] **Wiring:** Write a simple CLI tool in `main.go` to send a single prompt to the provider and stream the response to stdout.
 

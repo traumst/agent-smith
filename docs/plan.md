@@ -9,6 +9,7 @@ The following are explicitly approved exceptions to Requirement #8 (no external 
 1. **`mattn/go-sqlite3`** — CGO-based SQLite driver. Required because Go has no built-in SQLite support. CGO is acceptable; we provide a web UI and later an API, not a WASM target.
 2. **`sqlite-vec`** — SQLite extension for local vector similarity search. Required for theme-based long-term memory. Will be loaded as an extension via `mattn/go-sqlite3`.
 3. **`chromedp`** (`github.com/chromedp/chromedp`) — Pure Go Chrome DevTools Protocol client. Required for browser-based web interaction and simulation tests. No external driver binaries needed — communicates directly with a local Chrome/Chromium installation.
+4. **`google.golang.org/genai`** — Official Gemini Go SDK. Required for interacting with the Gemini API natively in Go.
 
 All other functionality must use the Go standard library.
 
@@ -61,7 +62,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Implement the core reasoning loop and the ability to talk to an LLM.
 
-1. **Provider Adapters:** Implement `src/agent/adapter` for a primary provider (e.g., OpenAI or Anthropic API formats). Ensure the adapter can handle streaming Server-Sent Events from the model.
+1. **Provider Adapters:** Implement `src/agent/adapter` for the Gemini API using `google.golang.org/genai`. Ensure the adapter can handle streaming responses from the model.
 2. **Token Estimation:** Implement token counting and context window awareness in the agent layer (near the adapter, which knows the tokenizer). The protocol types carry a `TokensUsed` field; the counting logic lives here.
 3. **Thinking Loop:** Implement `src/agent/loop` to manage the request/response cycle. Error handling strategy:
    - **User STOP or timeout:** Circuit breaker — abort immediately, return partial result.
