@@ -52,27 +52,27 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 3.1: Consent Gateway & File System Tool
 
-- [ ] Implement a headless (stdin/stdout) consent gateway for sensitive actions (`run/auto/block`).
-- [ ] Implement the File System tool for safe local read/write access.
-- [ ] **Wiring:** Update `main.go` to run a prompt asking the agent to write a file to disk, triggering the text-based consent prompt.
+- [x] Implement a headless (stdin/stdout) consent gateway for sensitive actions (`run/auto/block`).
+- [x] Implement the File System tool for safe local read/write access.
+- [x] **Wiring:** Update `main.go` to run a prompt asking the agent to write a file to disk, triggering the text-based consent prompt.
 
 ### Step 3.2: Terminal Tool
 
-- [ ] Implement the Terminal tool using `os/exec`.
-- [ ] Implement `.smithai-whitelist` parsing (with wildcard support).
-- [ ] Implement a command parser to block chained commands (`&&`, `|`, `;`, etc.) from inadvertently bypassing the whitelist.
-- [ ] **Wiring:** Ask the agent to run `ls`, verify it gets prompted, and verify wildcard auto-approval works.
+- [x] Implement the Terminal tool using `os/exec`.
+- [x] Implement `.whitelist` and `.blacklist` parsing (with wildcard support).
+- [x] Implement a command parser to block chained commands (`&&`, `|`, `;`, etc.) from inadvertently bypassing the whitelist.
+- [x] **Wiring:** Ask the agent to run `ls`, verify it gets prompted, and verify wildcard auto-approval works.
 
 ### Step 3.3: Web Browser Tool
 
-- [ ] Implement web browser automation tool using `chromedp`.
-- [ ] Block usage by default, requiring explicit user consent.
-- [ ] **Wiring:** Ask the agent to summarize a web page, verify it asks for consent, then successfully fetches the page.
+- [x] Implement web browser automation tool using `chromedp`.
+- [x] Block usage by default, requiring explicit user consent.
+- [x] **Wiring:** Ask the agent to summarize a web page, verify it asks for consent, then successfully fetches the page.
 
-### Step 3.4: MCP Dummy Client
+### Step 3.4: MCP Ping Client
 
-- [ ] Implement a basic MCP client to verify integration capabilities.
-- [ ] **Wiring:** Verify the agent can read from the MCP dummy client via a specific test prompt.
+- [x] Implement a basic MCP client to verify integration capabilities.
+- [x] **Wiring:** Verify the agent can read from the MCP ping client via a specific test prompt.
 
 ## Phase 4: API Layer
 

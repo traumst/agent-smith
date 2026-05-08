@@ -12,6 +12,8 @@ type Dispatcher interface {
 	Dispatch(ctx context.Context, call protocol.ToolCall) (string, error)
 	// Definitions returns the list of available tools.
 	Definitions() []protocol.ToolDef
+	// Register adds a tool to the dispatcher.
+	Register(def protocol.ToolDef, handler Handler)
 }
 
 // Handler is a function that executes a tool.

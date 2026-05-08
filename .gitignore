@@ -33,5 +33,7 @@ go.work.sum
 
 smithai
 run.sh
+.whitelist
+.blacklist
 *.db
-hello.txt
+*.txt

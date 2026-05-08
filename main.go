@@ -47,7 +47,7 @@ func main() {
 
 	req := protocol.Request{
 		SystemPrompt: cfg.SystemPrompt,
-		UserPrompt:   "Hello! Please use the 'dummy_test_tool' to say 'hello world'.",
+		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'example.com'.\n4. Ping the MCP server to verify integration.",
 		Stream:       true,
 	}
 
@@ -66,22 +66,10 @@ func main() {
 			geminiAdapter := gemini.NewAdapter(client, "gemini-2.5-flash")
 			dispatcher := tools.NewBasicDispatcher()
 
-			// Register Dummy Tool
-			dispatcher.Register(protocol.ToolDef{
-				Name:        "dummy_test_tool",
-				Description: "A dummy tool to test tool invocation.",
-				// We pass a very simple generic object for arguments schema (though empty works for tests often)
-				Parameters: map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"message": map[string]any{
-							"type": "string",
-						},
-					},
-				},
-			}, func(ctx context.Context, args any) (string, error) {
-				return fmt.Sprintf("Dummy tool executed with args: %+v", args), nil
-			})
+			tools.RegisterFSTools(dispatcher)
+			tools.RegisterTerminalTools(dispatcher)
+			tools.RegisterBrowserTools(dispatcher)
+			tools.RegisterMCPTools(dispatcher)
 
 			agent := loop.NewAgent(geminiAdapter, dispatcher)
 			fmt.Println("\n--- Starting Agent Loop ---")
