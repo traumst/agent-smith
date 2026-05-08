@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"google.golang.org/genai"
+
+	"smithai/src/agent/adapter/gemini"
+	"smithai/src/agent/loop"
 	"smithai/src/agent/protocol"
+	"smithai/src/agent/tools"
 	"smithai/src/persistence/db"
 	"smithai/src/persistence/history"
 	"smithai/src/persistence/logs"
@@ -41,10 +47,67 @@ func main() {
 
 	req := protocol.Request{
 		SystemPrompt: cfg.SystemPrompt,
-		UserPrompt:   "Hello, world!",
+		UserPrompt:   "Hello! Please use the 'dummy_test_tool' to say 'hello world'.",
+		Stream:       true,
 	}
 
 	fmt.Printf("Dummy request created: %+v\n", req)
+
+	// Phase 2: Smoke Test
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		fmt.Println("Warning: GEMINI_API_KEY not set, skipping Phase 2 Agent Loop test.")
+	} else {
+		ctx := context.Background()
+		client, err := genai.NewClient(ctx, nil) // Uses GEMINI_API_KEY env var automatically
+		if err != nil {
+			fmt.Printf("Failed to create genai client: %v\n", err)
+		} else {
+			geminiAdapter := gemini.NewAdapter(client, "gemini-2.5-flash")
+			dispatcher := tools.NewBasicDispatcher()
+
+			// Register Dummy Tool
+			dispatcher.Register(protocol.ToolDef{
+				Name:        "dummy_test_tool",
+				Description: "A dummy tool to test tool invocation.",
+				// We pass a very simple generic object for arguments schema (though empty works for tests often)
+				Parameters: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"message": map[string]any{
+							"type": "string",
+						},
+					},
+				},
+			}, func(ctx context.Context, args any) (string, error) {
+				return fmt.Sprintf("Dummy tool executed with args: %+v", args), nil
+			})
+
+			agent := loop.NewAgent(geminiAdapter, dispatcher)
+			fmt.Println("\n--- Starting Agent Loop ---")
+			
+			stream, err := agent.Run(ctx, &req)
+			if err != nil {
+				fmt.Printf("Agent Run failed: %v\n", err)
+			} else {
+				for resp := range stream {
+					if resp.Error != nil {
+						fmt.Printf("\n[Error from stream]: %v\n", resp.Error)
+						break
+					}
+					if resp.Done {
+						fmt.Printf("\n[Stream Complete. Tokens used: %d]\n", resp.TokensUsed)
+						break
+					}
+					// Print text chunk
+					if resp.Content != "" {
+						fmt.Print(resp.Content)
+					}
+				}
+			}
+			fmt.Println("\n--- End of Agent Loop ---")
+		}
+	}
 
 	// SQLite Testing
 	dbPath := "data/smith.db"
