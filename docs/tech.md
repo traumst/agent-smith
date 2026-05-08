@@ -21,6 +21,7 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 
 ## Agent Layer & API
 
+- **LLM Provider**: Uses Google Gemini via the official Go SDK as the primary agent reasoning engine, providing native streaming and tool calling.
 - **Standard HTTP (`net/http`)**: Go's robust HTTP package serves both the API layer (handlers/middleware) and the UI layer.
 - **Server-Sent Events (SSE)**: To fulfill the requirement for streaming LLM thinking and reasoning, SSE is used in the API layer and consumed by HTMX or vanilla JS in the UI layer.
 

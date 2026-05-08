@@ -7,10 +7,19 @@ type SystemPrompt struct {
 	Instructions string `json:"instructions"`
 }
 
+// ToolResult represents the output of a tool execution.
+type ToolResult struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Result string `json:"result"`
+}
+
 // Message represents a single chat message in the conversation history.
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role        string       `json:"role"`
+	Content     string       `json:"content"`
+	ToolCalls   []ToolCall   `json:"toolCalls,omitempty"`
+	ToolResults []ToolResult `json:"toolResults,omitempty"`
 }
 
 // ToolDef represents the JSON schema definition for a tool available to the agent.

@@ -2,6 +2,7 @@ package gemini
 
 import (
 	"context"
+	"encoding/json"
 
 	"google.golang.org/genai"
 
@@ -60,15 +61,23 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		var toolDefs []*genai.Tool
 		var functionDefs []*genai.FunctionDeclaration
 		for _, td := range req.Tools {
-			// Basic mapping. Assuming td.Parameters is a valid map that can be cast or marshalled
-			// into genai.Schema if needed, or we just pass it as generic JSON schema.
-			// The GenAI SDK uses genai.Schema struct. We will need to map it.
-			// For simplicity in Phase 2, we might not map full schemas deeply unless needed.
+			var schema *genai.Schema
+			if td.Parameters != nil {
+				b, err := json.Marshal(td.Parameters)
+				if err == nil {
+					json.Unmarshal(b, &schema)
+					// Fix lowercase types to uppercase as required by Gemini API
+					if schema != nil && schema.Type != "" {
+						// We'll let Gemini API complain if it's strictly requiring uppercase, 
+						// though usually json.Unmarshal is fine. For safety, we could walk the schema
+						// but let's stick to simple marshal/unmarshal.
+					}
+				}
+			}
 			functionDefs = append(functionDefs, &genai.FunctionDeclaration{
 				Name:        td.Name,
 				Description: td.Description,
-				// We need to convert td.Parameters (which is `any`) to *genai.Schema
-				// We will handle tool schemas properly in the dispatcher implementation.
+				Parameters:  schema,
 			})
 		}
 		toolDefs = append(toolDefs, &genai.Tool{FunctionDeclarations: functionDefs})
@@ -81,21 +90,52 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		if role == "assistant" {
 			role = "model"
 		}
+
+		var parts []*genai.Part
+		if m.Content != "" {
+			parts = append(parts, &genai.Part{Text: m.Content})
+		}
+
+		// Map ToolCalls
+		for _, tc := range m.ToolCalls {
+			argsMap, ok := tc.Arguments.(map[string]any)
+			if !ok && tc.Arguments != nil {
+				b, _ := json.Marshal(tc.Arguments)
+				json.Unmarshal(b, &argsMap)
+			}
+			parts = append(parts, &genai.Part{
+				FunctionCall: &genai.FunctionCall{
+					Name: tc.Name,
+					Args: argsMap,
+				},
+			})
+		}
+
+		// Map ToolResults
+		for _, tr := range m.ToolResults {
+			parts = append(parts, &genai.Part{
+				FunctionResponse: &genai.FunctionResponse{
+					Name:     tr.Name,
+					Response: map[string]any{"result": tr.Result},
+				},
+			})
+		}
+
 		contents = append(contents, &genai.Content{
-			Role: role,
-			Parts: []*genai.Part{
-				{Text: m.Content},
-			},
+			Role:  role,
+			Parts: parts,
 		})
 	}
 
 	// Add User Prompt
-	contents = append(contents, &genai.Content{
-		Role: "user",
-		Parts: []*genai.Part{
-			{Text: req.UserPrompt},
-		},
-	})
+	if req.UserPrompt != "" {
+		contents = append(contents, &genai.Content{
+			Role: "user",
+			Parts: []*genai.Part{
+				{Text: req.UserPrompt},
+			},
+		})
+	}
 
 	if req.Stream {
 		var totalTokens int

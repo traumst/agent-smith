@@ -15,7 +15,7 @@ smithai/
 │   │   ├── logs/             # Usage logs (SQLite)
 │   │   └── memory/           # Long-term memory: read/write plaintext files, keyword extraction, cap enforcement
 │   ├── agent/                # Agent Layer: Core agent logic and protocol
-│   │   ├── adapter/          # LLM API providers (e.g., openai, anthropic)
+│   │   ├── adapter/          # LLM API providers (e.g., gemini)
 │   │   ├── protocol/         # Request/Response types (competence, mood, instructions, tools, file deltas)
 │   │   ├── loop/             # Thinking loop, stream handling, tool execution, error recovery
 │   │   ├── tools/            # Out-of-the-box tools (fs, web search, terminal, mcp dummy)

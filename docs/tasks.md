@@ -36,17 +36,17 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 2.1: Provider Adapter & Token Estimation
 
-- [ ] Implement `src/agent/adapter` for the Gemini API using `google.golang.org/genai`.
-- [ ] Implement streaming responses from the Gemini provider using the SDK's streaming capabilities.
-- [ ] Implement token estimation logic in the agent layer to track `TokensUsed` (accounting for system prompt overhead).
-- [ ] **Wiring:** Write a simple CLI tool in `main.go` to send a single prompt to the provider and stream the response to stdout.
+- [x] Implement `src/agent/adapter` for the Gemini API using `google.golang.org/genai`.
+- [x] Implement streaming responses from the Gemini provider using the SDK's streaming capabilities.
+- [x] Implement token estimation logic in the agent layer to track `TokensUsed` (accounting for system prompt overhead).
+- [x] **Wiring:** Write a simple CLI tool in `main.go` to send a single prompt to the provider and stream the response to stdout.
 
 ### Step 2.2: Thinking Loop & Tool Dispatcher
 
-- [ ] Implement the core `src/agent/loop` to manage the request/response cycle.
-- [ ] Add error handling strategy (exponential backoff for transients, fail-fast for auth, circuit breakers for timeouts/user stops).
-- [ ] Define the JSON tool format and implement a basic tool dispatcher to route tool calls safely.
-- [ ] **Wiring:** Update `main.go` with a hardcoded integration test (smoke test) that feeds a prompt requiring a dummy tool call into the loop and verifies the loop handles it.
+- [x] Implement the core `src/agent/loop` to manage the request/response cycle.
+- [x] Add error handling strategy (exponential backoff for transients, fail-fast for auth, circuit breakers for timeouts/user stops).
+- [x] Define the JSON tool format and implement a basic tool dispatcher to route tool calls safely.
+- [x] **Wiring:** Update `main.go` with a hardcoded integration test (smoke test) that feeds a prompt requiring a dummy tool call into the loop and verifies the loop handles it.
 
 ## Phase 3: Out-of-the-box Tools
 
