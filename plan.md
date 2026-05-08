@@ -68,7 +68,7 @@ All other functionality must use the Go standard library.
    - **Transient API errors (rate limits, 5xx, network):** Exponential backoff, retry up to 3 times, then fail with clear error message.
    - **Unrecoverable errors (auth, malformed request):** Fail fast, return error immediately.
 4. **Tool Dispatch:** Define the JSON tool format and implement the dispatcher to route tool calls safely.
-5. **Test Harness:** Write a short scenario in `cmd/smith/main.go` that wires up the agent with a provider and runs a basic prompt end-to-end. This serves as the integration smoke test for Phases 2-3.
+5. **Test Harness:** Write a short scenario in `main.go` that wires up the agent with a provider and runs a basic prompt end-to-end. This serves as the integration smoke test for Phases 2-3.
 
 ## Phase 3: Out-of-the-box Tools
 
@@ -86,7 +86,7 @@ All other functionality must use the Go standard library.
 
 1. **Middleware:** Add standard logging, timeout, and panic recovery middleware (`internal/api/middleware`).
 2. **Handlers:** Implement REST endpoints for settings/history and SSE endpoints for streaming chat responses and thoughts.
-3. **Integration:** Wire the Agent Layer to the API Layer in `cmd/smith/main.go` and ensure it runs functionally as a headless HTTP server.
+3. **Integration:** Wire the Agent Layer to the API Layer in `main.go` and ensure it runs functionally as a headless HTTP server.
 
 ## Phase 5: UI Layer
 
@@ -108,4 +108,4 @@ All other functionality must use the Go standard library.
 
 - **Unit Tests:** Write unit tests for all public functions across all packages. Run via `go test ./...`.
 - **Simulation Tests:** Use `chromedp` to write end-to-end browser tests that interact with the running SmithAI web UI — submitting prompts, verifying streamed responses, testing consent dialogs, etc.
-- **Smoke Test:** The `cmd/smith/main.go` harness from Phase 2 serves as a quick integration check throughout development.
+- **Smoke Test:** The `main.go` harness from Phase 2 serves as a quick integration check throughout development.
