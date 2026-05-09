@@ -2,17 +2,20 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
-	"os/exec"
-	"strings"
+	"time"
 
 	"google.golang.org/genai"
 
 	"smithai/src/agent/adapter/gemini"
 	"smithai/src/agent/loop"
-	"smithai/src/agent/protocol"
 	"smithai/src/agent/tools"
+	"smithai/src/api/handlers"
+	"smithai/src/api/middleware"
 	"smithai/src/persistence/db"
 	"smithai/src/persistence/history"
 	"smithai/src/persistence/logs"
@@ -20,57 +23,75 @@ import (
 	"smithai/src/persistence/refs"
 	"smithai/src/persistence/settings"
 	"smithai/src/persistence/vector"
+	"smithai/src/test"
 )
 
 func main() {
+	testFlag := flag.Bool("test", false, "Run the CLI smoke test instead of starting the HTTP server")
+	flag.Parse()
+
 	fmt.Println("SmithAI starting up...")
 
 	settingsPath := "data/settings.json"
 
-	// Ensure data directory exists
 	if err := os.MkdirAll("data", 0755); err != nil {
-		fmt.Printf("Failed to create data dir: %v\n", err)
-		return
+		log.Fatalf("Failed to create data dir: %v\n", err)
 	}
 
 	cfg, err := settings.LoadSettings(settingsPath)
 	if err != nil {
-		fmt.Printf("Failed to load settings: %v\n", err)
-		return
+		log.Fatalf("Failed to load settings: %v\n", err)
 	}
 
-	// Try saving to ensure it writes correctly
 	if err := settings.SaveSettings(settingsPath, cfg); err != nil {
-		fmt.Printf("Failed to save settings: %v\n", err)
+		log.Fatalf("Failed to save settings: %v\n", err)
+	}
+
+	if *testFlag {
+		fmt.Println("Running smoke test...")
+		test.RunSmokeTest(cfg)
 		return
 	}
 
-	fmt.Printf("Configured Mood: %s\n", cfg.SystemPrompt.Mood)
+	fmt.Println("Initializing API server...")
 
-	registry := gemini.NewModelRegistry()
-	selectedModel := selectModelInteractive(registry.Models)
-	registry.SetActive(selectedModel)
-	fmt.Printf("grug use model: %s\n\n", selectedModel)
+	dbPath := "data/smith.db"
+	sqliteDB, err := db.InitDB(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to init DB: %v\n", err)
+	}
+	defer sqliteDB.Close()
 
-	req := protocol.Request{
-		SystemPrompt: cfg.SystemPrompt,
-		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'en.wikipedia.org/wiki/Main_Page'.\n4. Ping the MCP server to verify integration.",
-		Stream:       true,
+	if err := history.CreateTable(sqliteDB); err != nil {
+		log.Fatalf("Failed to create history table: %v\n", err)
+	}
+	if err := logs.CreateTable(sqliteDB); err != nil {
+		log.Fatalf("Failed to create logs table: %v\n", err)
+	}
+	if err := refs.CreateTable(sqliteDB); err != nil {
+		log.Fatalf("Failed to create refs table: %v\n", err)
+	}
+	if err := vector.CreateTable(sqliteDB); err != nil {
+		log.Fatalf("Failed to create vector table: %v\n", err)
 	}
 
-	fmt.Printf("Dummy request created: %+v\n", req)
+	memStore, err := memory.NewStore(sqliteDB, "data/memory")
+	if err != nil {
+		log.Fatalf("Failed to create memory store: %v\n", err)
+	}
 
-	// Phase 2: Smoke Test
 	apiKey := os.Getenv("GEMINI_API_KEY")
+	var agent *loop.Agent
 	if apiKey == "" {
-		fmt.Println("Warning: GEMINI_API_KEY not set, skipping Phase 2 Agent Loop test.")
+		log.Println("Warning: GEMINI_API_KEY not set. Chat agent will fail.")
 	} else {
 		ctx := context.Background()
-		client, err := genai.NewClient(ctx, nil) // Uses GEMINI_API_KEY env var automatically
+		client, err := genai.NewClient(ctx, nil)
 		if err != nil {
-			fmt.Printf("Failed to create genai client: %v\n", err)
+			log.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			geminiAdapter := gemini.NewAdapter(client, selectedModel, cfg.GeminiRPM)
+			registry := gemini.NewModelRegistry()
+			geminiAdapter := gemini.NewAdapter(client, registry.Models[0].Stable, cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)
@@ -78,174 +99,34 @@ func main() {
 			tools.RegisterBrowserTools(dispatcher)
 			tools.RegisterMCPTools(dispatcher)
 
-			agent := loop.NewAgent(geminiAdapter, dispatcher)
-			fmt.Println("--- Starting Agent Loop ---")
-
-			stream, err := agent.Run(ctx, &req)
-			if err != nil {
-				fmt.Printf("Agent Run failed: %v\n", err)
-			} else {
-				var fullOutput strings.Builder
-				for resp := range stream {
-					if resp.Error != nil {
-						fmt.Printf("\n[Error from stream]: %v\n", resp.Error)
-						break
-					}
-					if resp.Done {
-						fmt.Printf("\n[Stream Complete. Tokens used: %d]\n", resp.TokensUsed)
-						break
-					}
-					if resp.Content != "" {
-						fmt.Printf("[LLM response] %s\n", resp.Content)
-						fullOutput.WriteString(resp.Content)
-					}
-				}
-
-				// Assert browser tool actually loaded the page
-				if strings.Contains(fullOutput.String(), "donate.wikimedia.org") {
-					fmt.Println("\n[PASS] browser_fetch: page loaded, donate.wikimedia.org link found")
-				} else {
-					fmt.Println("\n[FAIL] browser_fetch: donate.wikimedia.org link NOT found in output")
-				}
-			}
-			fmt.Println("\n--- End of Agent Loop ---")
+			agent = loop.NewAgent(geminiAdapter, dispatcher)
 		}
 	}
 
-	// SQLite Testing
-	dbPath := "data/smith.db"
-	sqliteDB, err := db.InitDB(dbPath)
-	if err != nil {
-		fmt.Printf("Failed to init DB: %v\n", err)
-		return
-	}
-	defer sqliteDB.Close()
+	mux := http.NewServeMux()
 
-	if err := history.CreateTable(sqliteDB); err != nil {
-		fmt.Printf("Failed to create history table: %v\n", err)
-		return
-	}
-	if err := logs.CreateTable(sqliteDB); err != nil {
-		fmt.Printf("Failed to create logs table: %v\n", err)
-		return
-	}
-	if err := refs.CreateTable(sqliteDB); err != nil {
-		fmt.Printf("Failed to create refs table: %v\n", err)
-		return
-	}
+	settingsHandler := &handlers.SettingsHandler{Path: settingsPath}
+	historyHandler := &handlers.HistoryHandler{DB: sqliteDB}
+	memoryHandler := &handlers.MemoryHandler{Store: memStore}
+	chatHandler := &handlers.ChatHandler{Agent: agent, DB: sqliteDB}
 
-	// Test history insert
-	sessionID := "test-session-123"
-	if err := history.AddMessage(sqliteDB, sessionID, protocol.Message{Role: "user", Content: "Hello from DB test!"}); err != nil {
-		fmt.Printf("Failed to add message: %v\n", err)
-		return
-	}
+	withTimeout := middleware.Timeout(30 * time.Second)
 
-	_, err = history.GetHistory(sqliteDB, sessionID)
-	if err != nil {
-		fmt.Printf("Failed to get history: %v\n", err)
-		return
-	}
-	// fmt.Printf("Retrieved History: %+v\n", hist)
+	mux.Handle("GET /api/settings", withTimeout(http.HandlerFunc(settingsHandler.Get)))
+	mux.Handle("POST /api/settings", withTimeout(http.HandlerFunc(settingsHandler.Post)))
+	mux.Handle("GET /api/history/{session_id}", withTimeout(http.HandlerFunc(historyHandler.Get)))
+	mux.Handle("POST /api/memory", withTimeout(http.HandlerFunc(memoryHandler.Post)))
 
-	if err := vector.CreateTable(sqliteDB); err != nil {
-		fmt.Printf("Failed to create vector table: %v\n", err)
-		return
-	}
+	// Chat stream can take a long time, no strict 30s timeout
+	mux.Handle("POST /api/chat", http.HandlerFunc(chatHandler.Post))
 
-	// Test Memory & Vector
-	memStore, err := memory.NewStore(sqliteDB, "data/memory")
-	if err != nil {
-		fmt.Printf("Failed to create memory store: %v\n", err)
-		return
-	}
+	var handler http.Handler = mux
+	handler = middleware.Recovery(handler)
+	handler = middleware.Logging(handler)
 
-	if err := memStore.SaveMemory("test_memory.txt", "Smith is an AI agent built in Go."); err != nil {
-		fmt.Printf("Failed to save memory: %v\n", err)
-		return
-	}
-
-	// Search for dummy vector (all zeros with first element 1.0)
-	queryVec := make([]float32, 1536)
-	queryVec[0] = 1.0
-	results, err := vector.Search(sqliteDB, queryVec, 5)
-	if err != nil {
-		fmt.Printf("Failed to search vector table: %v\n", err)
-		return
-	}
-	fmt.Printf("Vector Search Results: %+v\n", results)
-}
-
-func selectModelInteractive(models []gemini.ModelTier) string {
-	// Save current stty state
-	cmd := exec.Command("stty", "-g")
-	cmd.Stdin = os.Stdin
-	state, err := cmd.Output()
-	if err != nil {
-		// Fallback if stty not available
-		return models[0].Stable
-	}
-
-	// Set raw mode
-	cmdRaw := exec.Command("stty", "-icanon", "-echo")
-	cmdRaw.Stdin = os.Stdin
-	cmdRaw.Run()
-
-	// Restore original state
-	defer func() {
-		cmdRestore := exec.Command("stty", strings.TrimSpace(string(state)))
-		cmdRestore.Stdin = os.Stdin
-		cmdRestore.Run()
-	}()
-
-	// Hide cursor
-	fmt.Print("\033[?25l")
-	defer fmt.Print("\033[?25h")
-
-	selectedIndex := 0
-
-	for {
-		// Clear current line
-		fmt.Print("\r\033[K")
-		fmt.Println("\npick model (up/down arrows, space/enter to select):")
-		for i, m := range models {
-			if i == selectedIndex {
-				fmt.Printf("\033[K> %s\n", m.Name)
-			} else {
-				fmt.Printf("\033[K  %s\n", m.Name)
-			}
-		}
-
-		b := make([]byte, 3)
-		os.Stdin.Read(b)
-
-		if b[0] == '\n' || b[0] == '\r' || b[0] == ' ' {
-			// Clear the menu lines we drew
-			fmt.Printf("\033[%dA\033[J", len(models)+2)
-			return models[selectedIndex].Stable
-		}
-
-		// Handle escape sequences for arrow keys
-		if b[0] == 27 && b[1] == '[' {
-			if b[2] == 'A' { // Up arrow
-				selectedIndex--
-				if selectedIndex < 0 {
-					selectedIndex = len(models) - 1
-				}
-			} else if b[2] == 'B' { // Down arrow
-				selectedIndex++
-				if selectedIndex >= len(models) {
-					selectedIndex = 0
-				}
-			}
-		} else if b[0] == 3 { // Ctrl+C
-			// Clear and exit gracefully on sigint
-			fmt.Printf("\033[%dA\033[J", len(models)+2)
-			fmt.Print("\033[?25h")
-			os.Exit(1)
-		}
-
-		// Move cursor back up to redraw the menu
-		fmt.Printf("\033[%dA", len(models)+2)
+	port := ":8080"
+	fmt.Printf("Listening on %s\n", port)
+	if err := http.ListenAndServe(port, handler); err != nil {
+		log.Fatalf("Server failed: %v", err)
 	}
 }

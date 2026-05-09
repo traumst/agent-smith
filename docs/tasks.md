@@ -78,15 +78,15 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 4.1: HTTP Middleware & REST Handlers
 
-- [ ] Implement basic middleware: logging, timeout, panic recovery (`src/api/middleware`).
-- [ ] Implement REST endpoints for fetching/updating settings, memory, and chat history.
-- [ ] **Wiring:** Expose these endpoints via a basic HTTP server in `main.go` and test via `curl`.
+- [x] Implement basic middleware: logging, timeout, panic recovery (`src/api/middleware`).
+- [x] Implement REST endpoints for fetching/updating settings, memory, and chat history.
+- [x] **Wiring:** Expose these endpoints via a basic HTTP server in `main.go` and test via `curl`.
 
 ### Step 4.2: Streaming Endpoints & Agent Wiring
 
-- [ ] Implement SSE endpoints in the API layer for streaming chat responses and agent thoughts.
-- [ ] Connect the API handlers to the `src/agent/loop`.
-- [ ] **Wiring:** Use `curl` to send a chat request and verify the SSE stream outputs agent reasoning and the final response.
+- [x] Implement SSE endpoints in the API layer for streaming chat responses and agent thoughts.
+- [x] Connect the API handlers to the `src/agent/loop`.
+- [x] **Wiring:** Use `curl` to send a chat request and verify the SSE stream outputs agent reasoning and the final response.
 
 ## Phase 5: UI Layer
 

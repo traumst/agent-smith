@@ -36,4 +36,6 @@ run.sh
 .whitelist
 .blacklist
 *.db
+*.db-shm
+*.db-wal
 *.txt
