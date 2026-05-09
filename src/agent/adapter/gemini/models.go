@@ -28,7 +28,7 @@ func NewModelRegistry() *ModelRegistry {
 			{Name: "Gemini Embedding 1", Stable: "gemini-embedding-001", Experimental: "gemini-embedding-001-preview"},
 			{Name: "Gemini Embedding 2", Stable: "gemini-embedding-2", Experimental: "gemini-embedding-2-preview"},
 		},
-		Active: "gemini-2.5-flash-lite", // default
+		Active: "gemini-3-flash", // default
 	}
 }
 

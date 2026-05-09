@@ -3,6 +3,7 @@ package gemini
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"google.golang.org/genai"
 
@@ -20,7 +21,8 @@ type Adapter struct {
 // NewAdapter creates a new Gemini adapter. rpm controls requests per minute (0 = no limit).
 func NewAdapter(client *genai.Client, model string, rpm int) *Adapter {
 	if model == "" {
-		model = "gemini-2.5-flash-lite"
+		model = NewModelRegistry().Active
+		fmt.Printf("Model not specified, using default model: %s\n", model)
 	}
 	return &Adapter{
 		client:  client,
@@ -52,13 +54,15 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		sysPrompt += req.SystemPrompt.Instructions + "\n\n"
 	}
 
-	config := &genai.GenerateContentConfig{
-		SystemInstruction: &genai.Content{
+	config := &genai.GenerateContentConfig{}
+	if sysPrompt != "" {
+		config.SystemInstruction = &genai.Content{
 			Parts: []*genai.Part{
 				{Text: sysPrompt},
 			},
-		},
+		}
 	}
+
 	if req.MaxTokens > 0 {
 		maxT := int32(req.MaxTokens)
 		config.MaxOutputTokens = maxT

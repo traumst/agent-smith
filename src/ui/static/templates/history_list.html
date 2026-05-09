@@ -1,0 +1,12 @@
+{{range .Sessions}}
+<button class="w-full text-left px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors flex flex-col gap-1" onclick="loadSession('{{.SessionID}}')">
+  <span class="font-medium truncate">{{if .FirstMessage}}{{.FirstMessage}}{{else}}New Chat{{end}}</span>
+  <span class="text-xs text-gray-500">{{.MessageCount}} messages &bull; {{.CreatedAt.Format "Jan 02, 15:04"}}</span>
+</button>
+{{end}}
+
+{{if .HasMore}}
+<div hx-get="/ui/history?offset={{.NextOffset}}" hx-trigger="revealed" hx-swap="outerHTML">
+  <div class="px-3 py-2 text-xs text-gray-500 text-center">Loading more...</div>
+</div>
+{{end}}

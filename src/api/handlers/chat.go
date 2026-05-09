@@ -14,8 +14,9 @@ import (
 
 // ChatHandler manages the agent interaction endpoint via SSE.
 type ChatHandler struct {
-	Agent *loop.Agent
-	DB    *sql.DB
+	Agent      *loop.Agent
+	DB         *sql.DB
+	ConsentChan <-chan string // receives consent request JSON from main
 }
 
 // Post handles chat requests and streams responses via Server-Sent Events.
@@ -69,39 +70,57 @@ func (h *ChatHandler) Post(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	stream, err := h.Agent.Run(ctx, &agentReq)
 	if err != nil {
-		fmt.Fprintf(w, "data: error: %v\n\n", err)
-		flusher.Flush()
+		writeSSE(w, flusher, "error", fmt.Sprintf("error: %v", err))
 		return
 	}
 
 	var fullContent strings.Builder
 
-	for resp := range stream {
-		if resp.Error != nil {
-			errStr := strings.ReplaceAll(resp.Error.Error(), "\n", "\ndata: ")
-			fmt.Fprintf(w, "data: error: %s\n\n", errStr)
-			flusher.Flush()
-			break
-		}
+	for {
+		select {
+		case consentData := <-h.ConsentChan:
+			writeSSE(w, flusher, "consent", consentData)
 
-		if resp.Content != "" {
-			fullContent.WriteString(resp.Content)
-			// Replace newlines with \ndata: to preserve SSE format for multiline text
-			content := strings.ReplaceAll(resp.Content, "\n", "\ndata: ")
-			fmt.Fprintf(w, "data: %s\n\n", content)
-			flusher.Flush()
-		}
+		case resp, ok := <-stream:
+			if !ok {
+				// stream closed
+				writeSSE(w, flusher, "done", "")
+				goto save
+			}
 
-		if resp.Done {
-			fmt.Fprintf(w, "data: \n\ndata: Tokens used: %d\n\n", resp.TokensUsed)
-			flusher.Flush()
-			break
+			if resp.Error != nil {
+				errStr := strings.ReplaceAll(resp.Error.Error(), "\n", " ")
+				writeSSE(w, flusher, "error", errStr)
+				goto save
+			}
+
+			if resp.Content != "" {
+				fullContent.WriteString(resp.Content)
+				writeSSE(w, flusher, "message", resp.Content)
+			}
+
+			if resp.Done {
+				writeSSE(w, flusher, "done", fmt.Sprintf("Tokens used: %d", resp.TokensUsed))
+				goto save
+			}
 		}
 	}
 
-	// Save the accumulated response to history
+save:
 	if fullContent.Len() > 0 {
 		assistantMsg := protocol.Message{Role: "assistant", Content: fullContent.String()}
 		_ = history.AddMessage(h.DB, req.SessionID, assistantMsg)
 	}
+}
+
+// writeSSE writes a single SSE event with proper formatting.
+func writeSSE(w http.ResponseWriter, flusher http.Flusher, event, data string) {
+	// SSE multiline data: each line must be prefixed with "data: "
+	lines := strings.Split(data, "\n")
+	fmt.Fprintf(w, "event: %s\n", event)
+	for _, line := range lines {
+		fmt.Fprintf(w, "data: %s\n", line)
+	}
+	fmt.Fprint(w, "\n")
+	flusher.Flush()
 }

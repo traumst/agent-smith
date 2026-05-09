@@ -6,7 +6,51 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
+
+// PromptFunc is the function called when consent is needed and the subject
+// is not in whitelist or blacklist. Default is stdin prompt.
+// Set this to a web-based prompter before starting the HTTP server.
+var PromptFunc func(toolName, subject string, args any) (string, error) = stdinPrompt
+
+// PendingConsent tracks consent requests waiting for a web UI response.
+type PendingConsent struct {
+	mu       sync.Mutex
+	pending  map[string]chan string
+}
+
+// NewPendingConsent creates a new pending consent tracker.
+func NewPendingConsent() *PendingConsent {
+	return &PendingConsent{pending: make(map[string]chan string)}
+}
+
+// Wait registers a consent request and blocks until a response arrives.
+func (p *PendingConsent) Wait(id string) string {
+	ch := make(chan string, 1)
+	p.mu.Lock()
+	p.pending[id] = ch
+	p.mu.Unlock()
+
+	action := <-ch
+
+	p.mu.Lock()
+	delete(p.pending, id)
+	p.mu.Unlock()
+	return action
+}
+
+// Respond sends an action to a waiting consent request.
+func (p *PendingConsent) Respond(id, action string) bool {
+	p.mu.Lock()
+	ch, ok := p.pending[id]
+	p.mu.Unlock()
+	if !ok {
+		return false
+	}
+	ch <- action
+	return true
+}
 
 // checkList checks if a given string matches any pattern in a file
 func checkList(filename string, subject string) (bool, error) {
@@ -24,7 +68,7 @@ func checkList(filename string, subject string) (bool, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// .gitignore style wildcards implies simple globbing, where '*' matches anything.
 		// We can use filepath.Match. Note that filepath.Match requires full match.
 		// If line doesn't contain a wildcard, check for exact match.
@@ -72,33 +116,42 @@ func Require(toolName string, subject string, args any) (string, error) {
 		return "run", nil
 	}
 
-	// Prompt the user
+	return PromptFunc(toolName, subject, args)
+}
+
+// HandleConsentAction processes the raw action string from either stdin or web UI.
+// Handles auto-whitelist and block-always logic. Returns "run" or "block".
+func HandleConsentAction(action, subject string) string {
+	switch action {
+	case "run", "y":
+		return "run"
+	case "block", "n":
+		return "block"
+	case "auto", "a":
+		if err := appendToList(".whitelist", subject); err != nil {
+			fmt.Printf("Warning: failed to write to .whitelist: %v\n", err)
+		}
+		return "run"
+	case "block-always", "b":
+		if err := appendToList(".blacklist", subject); err != nil {
+			fmt.Printf("Warning: failed to write to .blacklist: %v\n", err)
+		}
+		return "block"
+	default:
+		fmt.Println("Invalid input, defaulting to block.")
+		return "block"
+	}
+}
+
+func stdinPrompt(toolName, subject string, args any) (string, error) {
 	fmt.Printf("\n[Consent Required] Tool: %s, Subject: %s\nArgs: %+v\nAllow? (y = run, n = block, a = auto-allow, b = block-always): ", toolName, subject, args)
-	
+
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-	
+
 	input = strings.ToLower(strings.TrimSpace(input))
-	switch input {
-	case "y":
-		return "run", nil
-	case "n":
-		return "block", nil
-	case "a":
-		if err := appendToList(".whitelist", subject); err != nil {
-			fmt.Printf("Warning: failed to write to .whitelist: %v\n", err)
-		}
-		return "run", nil
-	case "b":
-		if err := appendToList(".blacklist", subject); err != nil {
-			fmt.Printf("Warning: failed to write to .blacklist: %v\n", err)
-		}
-		return "block", nil
-	default:
-		fmt.Println("Invalid input, defaulting to block.")
-		return "block", nil
-	}
+	return HandleConsentAction(input, subject), nil
 }

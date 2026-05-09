@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SmithAI — AI coding assistant">
+  <title>SmithAI</title>
+  <script src="/static/tailwind.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/htmx-ext-sse.js"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body class="h-full bg-gray-950 text-gray-100 antialiased">
+
+  {{block "content" .}}{{end}}
+
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+  <!-- Consent modal -->
+  <div id="consent-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center modal-backdrop bg-black/50">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4">
+      <h3 class="text-lg font-semibold text-white mb-1">Permission Required</h3>
+      <p class="text-sm text-gray-400 mb-4">The agent wants to use a tool that requires your approval.</p>
+
+      <div class="space-y-3 mb-6">
+        <div>
+          <span class="text-xs uppercase tracking-wider text-gray-500">Tool</span>
+          <p id="consent-tool-name" class="text-white font-mono text-sm mt-0.5"></p>
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-gray-500">Subject</span>
+          <p id="consent-subject" class="text-white font-mono text-sm mt-0.5"></p>
+        </div>
+        <div>
+          <span class="text-xs uppercase tracking-wider text-gray-500">Details</span>
+          <pre id="consent-details" class="text-gray-300 text-xs bg-gray-900 rounded-lg p-3 mt-0.5 overflow-x-auto"></pre>
+        </div>
+      </div>
+
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="respondConsent('run')"
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors">
+          Allow Once
+        </button>
+        <button onclick="respondConsent('auto')"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors">
+          Always Allow
+        </button>
+        <button onclick="respondConsent('block')"
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm font-medium transition-colors">
+          Deny Once
+        </button>
+        <button onclick="respondConsent('block-always')"
+          class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors">
+          Always Deny
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

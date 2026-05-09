@@ -57,3 +57,56 @@ func GetHistory(db *sql.DB, sessionID string) ([]protocol.Message, error) {
 
 	return history, nil
 }
+
+// SessionSummary represents a brief overview of a chat session.
+type SessionSummary struct {
+	SessionID    string    `json:"session_id"`
+	FirstMessage string    `json:"first_message"`
+	MessageCount int       `json:"message_count"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// ListSessions retrieves a summary of past sessions, ordered by most recent first.
+func ListSessions(db *sql.DB, limit, offset int) ([]SessionSummary, error) {
+	query := `
+		SELECT 
+			session_id,
+			MIN(created_at) as created_at,
+			COUNT(id) as message_count,
+			(SELECT content FROM chat_history ch2 WHERE ch2.session_id = ch1.session_id ORDER BY created_at ASC LIMIT 1) as first_message
+		FROM chat_history ch1
+		GROUP BY session_id
+		ORDER BY MAX(created_at) DESC
+		LIMIT ? OFFSET ?
+	`
+	rows, err := db.Query(query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []SessionSummary
+	for rows.Next() {
+		var s SessionSummary
+		var createdAt string
+		if err := rows.Scan(&s.SessionID, &createdAt, &s.MessageCount, &s.FirstMessage); err != nil {
+			return nil, fmt.Errorf("failed to scan session summary: %w", err)
+		}
+		
+		// Parse sqlite datetime string
+		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
+			s.CreatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
+			s.CreatedAt = t
+		}
+		
+		// Truncate first message for display
+		if len(s.FirstMessage) > 50 {
+			s.FirstMessage = s.FirstMessage[:47] + "..."
+		}
+		
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
+}
