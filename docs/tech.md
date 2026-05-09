@@ -15,7 +15,8 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 
 ## UI Layer
 
-- **HTML/CSS/JS (Vanilla)**: Keeps the project simple and free of bloated build steps or complex frontend frameworks.
+- **HTML/JS (Vanilla)**: Keeps the project simple and free of bloated build steps or complex frontend frameworks.
+- **Tailwind CSS**: Latest stable version, downloaded from CDN and vendored into `src/ui/static/`. Bundled into the binary via Go `embed`. Only built-in utility classes used — no custom config, no build step.
 - **HTMX**: Latest stable version, downloaded from CDN and vendored into `src/ui/static/`. Bundled into the binary via Go `embed`. HTMX enables AJAX, CSS Transitions, and Server-Sent Events (SSE) directly in HTML attributes — streaming LLM responses and providing interactive feedback while keeping the frontend strictly simple.
 - **Go `html/template`**: Standard library templating to dynamically render HTML and inject JS/CSS where needed.
 

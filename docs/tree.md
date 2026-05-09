@@ -26,7 +26,7 @@ smithai/
 │   │   └── handlers/         # HTTP handlers for agent interaction (REST and SSE for streaming)
 │   └── ui/                   # UI Layer: Handling the web interface
 │       ├── templates/        # Go HTML templates
-│       └── static/           # Static assets (Vanilla CSS, JS, HTMX vendored from CDN)
+│       └── static/           # Static assets (JS, minimal CSS, HTMX + Tailwind vendored from CDN)
 ├── data/                     # Default persistence directory (next to binary, git-ignored)
 │   └── memory/               # Long-term memory plaintext files
 ├── go.mod                    # Go module: smithai
