@@ -20,7 +20,7 @@ type Adapter struct {
 // NewAdapter creates a new Gemini adapter. rpm controls requests per minute (0 = no limit).
 func NewAdapter(client *genai.Client, model string, rpm int) *Adapter {
 	if model == "" {
-		model = "gemini-2.5-flash"
+		model = "gemini-2.5-flash-lite"
 	}
 	return &Adapter{
 		client:  client,
@@ -76,7 +76,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 					json.Unmarshal(b, &schema)
 					// Fix lowercase types to uppercase as required by Gemini API
 					if schema != nil && schema.Type != "" {
-						// We'll let Gemini API complain if it's strictly requiring uppercase, 
+						// We'll let Gemini API complain if it's strictly requiring uppercase,
 						// though usually json.Unmarshal is fine. For safety, we could walk the schema
 						// but let's stick to simple marshal/unmarshal.
 					}
@@ -159,7 +159,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 
 			// Process chunk
 			pr := &protocol.Response{}
-			
+
 			// Map Usage Metadata
 			if resp.UsageMetadata != nil {
 				pr.TokensUsed = int(resp.UsageMetadata.TotalTokenCount)
@@ -174,8 +174,8 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 					}
 					if part.FunctionCall != nil {
 						pr.ToolCalls = append(pr.ToolCalls, protocol.ToolCall{
-							ID:   part.FunctionCall.Name, // GenAI doesn't use explicit IDs for tools the way OpenAI does
-							Name: part.FunctionCall.Name,
+							ID:        part.FunctionCall.Name, // GenAI doesn't use explicit IDs for tools the way OpenAI does
+							Name:      part.FunctionCall.Name,
 							Arguments: part.FunctionCall.Args,
 						})
 					}
@@ -206,8 +206,8 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 				}
 				if part.FunctionCall != nil {
 					pr.ToolCalls = append(pr.ToolCalls, protocol.ToolCall{
-						ID:   part.FunctionCall.Name,
-						Name: part.FunctionCall.Name,
+						ID:        part.FunctionCall.Name,
+						Name:      part.FunctionCall.Name,
 						Arguments: part.FunctionCall.Args,
 					})
 				}

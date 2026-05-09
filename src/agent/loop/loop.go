@@ -31,29 +31,15 @@ func NewAgent(adp adapter.Adapter, dispatcher tools.Dispatcher) *Agent {
 func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protocol.Response, error) {
 	outChan := make(chan *protocol.Response)
 
-	// Inject tool definitions into the request
 	if a.Dispatcher != nil {
 		req.Tools = a.Dispatcher.Definitions()
 	}
 
 	go func() {
 		defer close(outChan)
-
-		// Make a shallow copy of req to modify History safely during recursion
-		currentReq := *req
-		currentReq.History = make([]protocol.Message, len(req.History))
-		copy(currentReq.History, req.History)
-
-		if currentReq.UserPrompt != "" {
-			currentReq.History = append(currentReq.History, protocol.Message{
-				Role:    "user",
-				Content: currentReq.UserPrompt,
-			})
-			currentReq.UserPrompt = ""
-		}
+		currentReq := prepareRequest(req)
 
 		for {
-			// Check if context is cancelled
 			select {
 			case <-ctx.Done():
 				outChan <- &protocol.Response{Error: ctx.Err(), Done: true}
@@ -61,65 +47,13 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 			default:
 			}
 
-			var streamErr error
-			var fullResponse protocol.Message
-			fullResponse.Role = "assistant"
-			var finalDoneResp *protocol.Response
-
-			// Retry loop with exponential backoff
-			for attempt := 0; attempt <= 3; attempt++ {
-				adapterChan := make(chan *protocol.Response)
-
-				fmt.Printf("[LLM Request] attempt=%d history_len=%d\n", attempt+1, len(currentReq.History))
-				go func() {
-					a.Adapter.Chat(ctx, &currentReq, adapterChan)
-				}()
-
-				streamErr = nil
-				fullResponse = protocol.Message{Role: "assistant"}
-
-				for resp := range adapterChan {
-					if resp.Error != nil {
-						streamErr = resp.Error
-						break
-					}
-
-					// Accumulate full response
-					fullResponse.Content += resp.Content
-					if len(resp.ToolCalls) > 0 {
-						fullResponse.ToolCalls = append(fullResponse.ToolCalls, resp.ToolCalls...)
-					}
-
-					if resp.Done {
-						finalDoneResp = resp
-					} else {
-						// Only stream content out if we aren't going to loop immediately
-						// without showing what we are doing. Actually, we should stream everything.
-						outChan <- resp
-					}
-				}
-
-				if streamErr == nil {
-					break // success
-				}
-				// wait and retry
-				delay := parseRetryDelay(streamErr)
-				if delay == 0 {
-					delay = time.Duration(1<<attempt) * time.Second
-				}
-				secs := int(math.Ceil(delay.Seconds()))
-				outChan <- &protocol.Response{
-					Content: fmt.Sprintf("[Rate limited. Retrying in %ds...]\n", secs),
-				}
-				time.Sleep(delay)
-			}
-
-			if streamErr != nil {
-				outChan <- &protocol.Response{Error: streamErr, Done: true}
+			fullResponse, finalDoneResp, err := a.callLLM(ctx, &currentReq, outChan)
+			if err != nil {
+				fmt.Printf("[LLM Error] %s\n", err)
+				outChan <- &protocol.Response{Error: err, Done: true}
 				return
 			}
 
-			// If no tools were called, the reasoning loop is complete!
 			if len(fullResponse.ToolCalls) == 0 {
 				if finalDoneResp != nil {
 					outChan <- finalDoneResp
@@ -127,34 +61,109 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 				return
 			}
 
-			// We have tool calls. Let's execute them.
-			currentReq.History = append(currentReq.History, fullResponse)
-			toolResultsMsg := protocol.Message{Role: "user"}
-
-			for _, call := range fullResponse.ToolCalls {
-				result, err := a.Dispatcher.Dispatch(ctx, call)
-				if err != nil {
-					result = "Error: " + err.Error()
-				}
-
-				// Inform the user stream that a tool is being run/has run
-				outChan <- &protocol.Response{
-					Content: fmt.Sprintf("[\nTool:output\n%s:%s\n]\n", call.Name, result),
-				}
-
-				toolResultsMsg.ToolResults = append(toolResultsMsg.ToolResults, protocol.ToolResult{
-					ID:     call.ID,
-					Name:   call.Name,
-					Result: result,
-				})
-			}
-
-			currentReq.History = append(currentReq.History, toolResultsMsg)
-			// Loop will now continue and send the updated history to the LLM
+			a.executeTools(ctx, &currentReq, fullResponse, outChan)
 		}
 	}()
 
 	return outChan, nil
+}
+
+// prepareRequest makes a safe copy of the request with user prompt folded into history.
+func prepareRequest(req *protocol.Request) protocol.Request {
+	currentReq := *req
+	currentReq.History = make([]protocol.Message, len(req.History))
+	copy(currentReq.History, req.History)
+
+	if currentReq.UserPrompt != "" {
+		currentReq.History = append(currentReq.History, protocol.Message{
+			Role:    "user",
+			Content: currentReq.UserPrompt,
+		})
+		currentReq.UserPrompt = ""
+	}
+	return currentReq
+}
+
+// callLLM sends request to the adapter with retry logic. Streams partial responses to outChan.
+// Returns the accumulated response, final done response, and any error after retries exhausted.
+func (a *Agent) callLLM(ctx context.Context, req *protocol.Request, outChan chan<- *protocol.Response) (protocol.Message, *protocol.Response, error) {
+	var streamErr error
+	var fullResponse protocol.Message
+	var finalDoneResp *protocol.Response
+
+	for attempt := 0; attempt <= 3; attempt++ {
+		adapterChan := make(chan *protocol.Response)
+
+		fmt.Printf("[LLM Request] attempt=%d history_len=%d\n", attempt+1, len(req.History))
+		go func() {
+			a.Adapter.Chat(ctx, req, adapterChan)
+		}()
+
+		streamErr = nil
+		fullResponse = protocol.Message{Role: "assistant"}
+
+		for resp := range adapterChan {
+			if resp.Error != nil {
+				streamErr = resp.Error
+				break
+			}
+
+			fmt.Printf("[LLM response chunk] %s\n", resp.Content)
+			fullResponse.Content += resp.Content
+			if len(resp.ToolCalls) > 0 {
+				fmt.Printf("[LLM response toolcalls] %s\n", resp.ToolCalls)
+				fullResponse.ToolCalls = append(fullResponse.ToolCalls, resp.ToolCalls...)
+			}
+
+			if resp.Done {
+				finalDoneResp = resp
+			} else {
+				outChan <- resp
+			}
+		}
+
+		if streamErr == nil {
+			break
+		}
+
+		fmt.Printf("[LLM STREAM ERROR] %s\n", streamErr)
+		delay := parseRetryDelay(streamErr)
+		if delay == 0 {
+			delay = time.Duration(1<<attempt) * time.Second
+		}
+		secs := int(math.Ceil(delay.Seconds()))
+		outChan <- &protocol.Response{
+			Content: fmt.Sprintf("[Rate limited. Retrying in %ds...]\n", secs),
+		}
+		time.Sleep(delay)
+	}
+
+	return fullResponse, finalDoneResp, streamErr
+}
+
+// executeTools dispatches tool calls, streams results to outChan, and appends to request history.
+func (a *Agent) executeTools(ctx context.Context, req *protocol.Request, response protocol.Message, outChan chan<- *protocol.Response) {
+	req.History = append(req.History, response)
+	toolResultsMsg := protocol.Message{Role: "user"}
+
+	for _, call := range response.ToolCalls {
+		result, err := a.Dispatcher.Dispatch(ctx, call)
+		if err != nil {
+			result = "Error: " + err.Error()
+		}
+
+		outChan <- &protocol.Response{
+			Content: fmt.Sprintf("[\nTool:output\n%s:%s\n]\n", call.Name, result),
+		}
+
+		toolResultsMsg.ToolResults = append(toolResultsMsg.ToolResults, protocol.ToolResult{
+			ID:     call.ID,
+			Name:   call.Name,
+			Result: result,
+		})
+	}
+
+	req.History = append(req.History, toolResultsMsg)
 }
 
 // parseRetryDelay extracts "retry in Xs" from error message, rounds up to whole seconds.

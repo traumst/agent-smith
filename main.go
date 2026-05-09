@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"google.golang.org/genai"
@@ -46,6 +47,11 @@ func main() {
 
 	fmt.Printf("Configured Mood: %s\n", cfg.SystemPrompt.Mood)
 
+	registry := gemini.NewModelRegistry()
+	selectedModel := selectModelInteractive(registry.Models)
+	registry.SetActive(selectedModel)
+	fmt.Printf("grug use model: %s\n\n", selectedModel)
+
 	req := protocol.Request{
 		SystemPrompt: cfg.SystemPrompt,
 		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'en.wikipedia.org/wiki/Main_Page'.\n4. Ping the MCP server to verify integration.",
@@ -64,7 +70,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			geminiAdapter := gemini.NewAdapter(client, "gemini-2.5-flash", cfg.GeminiRPM)
+			geminiAdapter := gemini.NewAdapter(client, selectedModel, cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)
@@ -90,7 +96,7 @@ func main() {
 						break
 					}
 					if resp.Content != "" {
-						fmt.Print("\nproducing output...\n")
+						fmt.Printf("[LLM response] %s\n", resp.Content)
 						fullOutput.WriteString(resp.Content)
 					}
 				}
@@ -168,4 +174,78 @@ func main() {
 		return
 	}
 	fmt.Printf("Vector Search Results: %+v\n", results)
+}
+
+func selectModelInteractive(models []gemini.ModelTier) string {
+	// Save current stty state
+	cmd := exec.Command("stty", "-g")
+	cmd.Stdin = os.Stdin
+	state, err := cmd.Output()
+	if err != nil {
+		// Fallback if stty not available
+		return models[0].Stable
+	}
+
+	// Set raw mode
+	cmdRaw := exec.Command("stty", "-icanon", "-echo")
+	cmdRaw.Stdin = os.Stdin
+	cmdRaw.Run()
+
+	// Restore original state
+	defer func() {
+		cmdRestore := exec.Command("stty", strings.TrimSpace(string(state)))
+		cmdRestore.Stdin = os.Stdin
+		cmdRestore.Run()
+	}()
+
+	// Hide cursor
+	fmt.Print("\033[?25l")
+	defer fmt.Print("\033[?25h")
+
+	selectedIndex := 0
+
+	for {
+		// Clear current line
+		fmt.Print("\r\033[K")
+		fmt.Println("\npick model (up/down arrows, space/enter to select):")
+		for i, m := range models {
+			if i == selectedIndex {
+				fmt.Printf("\033[K> %s\n", m.Name)
+			} else {
+				fmt.Printf("\033[K  %s\n", m.Name)
+			}
+		}
+
+		b := make([]byte, 3)
+		os.Stdin.Read(b)
+
+		if b[0] == '\n' || b[0] == '\r' || b[0] == ' ' {
+			// Clear the menu lines we drew
+			fmt.Printf("\033[%dA\033[J", len(models)+2)
+			return models[selectedIndex].Stable
+		}
+
+		// Handle escape sequences for arrow keys
+		if b[0] == 27 && b[1] == '[' {
+			if b[2] == 'A' { // Up arrow
+				selectedIndex--
+				if selectedIndex < 0 {
+					selectedIndex = len(models) - 1
+				}
+			} else if b[2] == 'B' { // Down arrow
+				selectedIndex++
+				if selectedIndex >= len(models) {
+					selectedIndex = 0
+				}
+			}
+		} else if b[0] == 3 { // Ctrl+C
+			// Clear and exit gracefully on sigint
+			fmt.Printf("\033[%dA\033[J", len(models)+2)
+			fmt.Print("\033[?25h")
+			os.Exit(1)
+		}
+
+		// Move cursor back up to redraw the menu
+		fmt.Printf("\033[%dA", len(models)+2)
+	}
 }
