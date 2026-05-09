@@ -19,6 +19,7 @@ smithai/
 │   │   ├── protocol/         # Request/Response types (competence, mood, instructions, tools, file deltas)
 │   │   ├── loop/             # Thinking loop, stream handling, tool execution, error recovery
 │   │   ├── tools/            # Out-of-the-box tools (fs, web search, terminal, mcp dummy)
+│   │   ├── ratelimit/        # RPM rate limiter for LLM API calls (configurable, no bursts)
 │   │   └── mcp/              # MCP client support and integration
 │   ├── api/                  # API Layer: Handling HTTP requests/responses
 │   │   ├── middleware/       # HTTP middleware (logging, timeout, recovery)

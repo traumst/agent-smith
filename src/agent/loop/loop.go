@@ -3,6 +3,9 @@ package loop
 import (
 	"context"
 	"fmt"
+	"math"
+	"regexp"
+	"strconv"
 	"time"
 
 	"smithai/src/agent/adapter"
@@ -66,7 +69,8 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 			// Retry loop with exponential backoff
 			for attempt := 0; attempt <= 3; attempt++ {
 				adapterChan := make(chan *protocol.Response)
-				
+
+				fmt.Printf("[LLM Request] attempt=%d history_len=%d\n", attempt+1, len(currentReq.History))
 				go func() {
 					a.Adapter.Chat(ctx, &currentReq, adapterChan)
 				}()
@@ -89,19 +93,25 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 					if resp.Done {
 						finalDoneResp = resp
 					} else {
-						// Only stream content out if we aren't going to loop immediately 
+						// Only stream content out if we aren't going to loop immediately
 						// without showing what we are doing. Actually, we should stream everything.
 						outChan <- resp
 					}
 				}
 
-				if streamErr != nil {
-					// Wait and retry
-					delay := time.Duration(1<<attempt) * time.Second
-					time.Sleep(delay)
-					continue
+				if streamErr == nil {
+					break // success
 				}
-				break // Success!
+				// wait and retry
+				delay := parseRetryDelay(streamErr)
+				if delay == 0 {
+					delay = time.Duration(1<<attempt) * time.Second
+				}
+				secs := int(math.Ceil(delay.Seconds()))
+				outChan <- &protocol.Response{
+					Content: fmt.Sprintf("[Rate limited. Retrying in %ds...]\n", secs),
+				}
+				time.Sleep(delay)
 			}
 
 			if streamErr != nil {
@@ -129,7 +139,7 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 
 				// Inform the user stream that a tool is being run/has run
 				outChan <- &protocol.Response{
-					Content: fmt.Sprintf("\n[Tool %s output: %s]\n", call.Name, result),
+					Content: fmt.Sprintf("[\nTool:output\n%s:%s\n]\n", call.Name, result),
 				}
 
 				toolResultsMsg.ToolResults = append(toolResultsMsg.ToolResults, protocol.ToolResult{
@@ -145,4 +155,19 @@ func (a *Agent) Run(ctx context.Context, req *protocol.Request) (<-chan *protoco
 	}()
 
 	return outChan, nil
+}
+
+// parseRetryDelay extracts "retry in Xs" from error message, rounds up to whole seconds.
+// Returns 0 if no retry delay found.
+func parseRetryDelay(err error) time.Duration {
+	re := regexp.MustCompile(`(?i)retry in ([0-9.]+)s`)
+	matches := re.FindStringSubmatch(err.Error())
+	if len(matches) < 2 {
+		return 0
+	}
+	secs, parseErr := strconv.ParseFloat(matches[1], 64)
+	if parseErr != nil {
+		return 0
+	}
+	return time.Duration(math.Ceil(secs)) * time.Second
 }

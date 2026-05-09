@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"google.golang.org/genai"
 
@@ -47,7 +48,7 @@ func main() {
 
 	req := protocol.Request{
 		SystemPrompt: cfg.SystemPrompt,
-		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'example.com'.\n4. Ping the MCP server to verify integration.",
+		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'en.wikipedia.org/wiki/Main_Page'.\n4. Ping the MCP server to verify integration.",
 		Stream:       true,
 	}
 
@@ -63,7 +64,7 @@ func main() {
 		if err != nil {
 			fmt.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			geminiAdapter := gemini.NewAdapter(client, "gemini-2.5-flash")
+			geminiAdapter := gemini.NewAdapter(client, "gemini-2.5-flash", cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)
@@ -72,12 +73,13 @@ func main() {
 			tools.RegisterMCPTools(dispatcher)
 
 			agent := loop.NewAgent(geminiAdapter, dispatcher)
-			fmt.Println("\n--- Starting Agent Loop ---")
-			
+			fmt.Println("--- Starting Agent Loop ---")
+
 			stream, err := agent.Run(ctx, &req)
 			if err != nil {
 				fmt.Printf("Agent Run failed: %v\n", err)
 			} else {
+				var fullOutput strings.Builder
 				for resp := range stream {
 					if resp.Error != nil {
 						fmt.Printf("\n[Error from stream]: %v\n", resp.Error)
@@ -87,10 +89,17 @@ func main() {
 						fmt.Printf("\n[Stream Complete. Tokens used: %d]\n", resp.TokensUsed)
 						break
 					}
-					// Print text chunk
 					if resp.Content != "" {
-						fmt.Print(resp.Content)
+						fmt.Print("\nproducing output...\n")
+						fullOutput.WriteString(resp.Content)
 					}
+				}
+
+				// Assert browser tool actually loaded the page
+				if strings.Contains(fullOutput.String(), "donate.wikimedia.org") {
+					fmt.Println("\n[PASS] browser_fetch: page loaded, donate.wikimedia.org link found")
+				} else {
+					fmt.Println("\n[FAIL] browser_fetch: donate.wikimedia.org link NOT found in output")
 				}
 			}
 			fmt.Println("\n--- End of Agent Loop ---")
@@ -126,12 +135,12 @@ func main() {
 		return
 	}
 
-	hist, err := history.GetHistory(sqliteDB, sessionID)
+	_, err = history.GetHistory(sqliteDB, sessionID)
 	if err != nil {
 		fmt.Printf("Failed to get history: %v\n", err)
 		return
 	}
-	fmt.Printf("Retrieved History: %+v\n", hist)
+	// fmt.Printf("Retrieved History: %+v\n", hist)
 
 	if err := vector.CreateTable(sqliteDB); err != nil {
 		fmt.Printf("Failed to create vector table: %v\n", err)

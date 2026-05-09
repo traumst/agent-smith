@@ -60,16 +60,17 @@ func RegisterBrowserTools(d Dispatcher) {
 		timeoutCtx, cancelTimeout := context.WithTimeout(taskCtx, 15*time.Second)
 		defer cancelTimeout()
 
-		var text string
+		var html string
 		err = chromedp.Run(timeoutCtx,
 			chromedp.Navigate(url),
 			chromedp.WaitReady("body"),
-			chromedp.Text("body", &text, chromedp.ByQuery),
+			// chromedp.Text("body", &text, chromedp.ByQuery),
+			chromedp.OuterHTML("body", &html, chromedp.ByQuery),
 		)
 		if err != nil {
 			return "", fmt.Errorf("browser works, page load failed: %v", err)
 		}
 
-		return text, nil
+		return html, nil
 	})
 }

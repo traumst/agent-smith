@@ -7,28 +7,36 @@ import (
 	"google.golang.org/genai"
 
 	"smithai/src/agent/protocol"
+	"smithai/src/agent/ratelimit"
 )
 
 // Adapter implements the adapter.Adapter interface for the Gemini API.
 type Adapter struct {
-	client *genai.Client
-	model  string
+	client  *genai.Client
+	model   string
+	limiter *ratelimit.Limiter
 }
 
-// NewAdapter creates a new Gemini adapter.
-func NewAdapter(client *genai.Client, model string) *Adapter {
+// NewAdapter creates a new Gemini adapter. rpm controls requests per minute (0 = no limit).
+func NewAdapter(client *genai.Client, model string, rpm int) *Adapter {
 	if model == "" {
 		model = "gemini-2.5-flash"
 	}
 	return &Adapter{
-		client: client,
-		model:  model,
+		client:  client,
+		model:   model,
+		limiter: ratelimit.NewLimiter(rpm),
 	}
 }
 
 // Chat sends the request to Gemini and streams back the responses.
 func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan chan<- *protocol.Response) error {
 	defer close(streamChan)
+
+	if _, err := a.limiter.Wait(ctx); err != nil {
+		streamChan <- &protocol.Response{Error: err}
+		return err
+	}
 
 	var contents []*genai.Content
 

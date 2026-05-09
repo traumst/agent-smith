@@ -11,6 +11,7 @@ import (
 // Settings encapsulates the overall configuration for the agent.
 type Settings struct {
 	SystemPrompt protocol.SystemPrompt `json:"systemPrompt"`
+	GeminiRPM    int                   `json:"geminiRPM"`
 }
 
 // LoadSettings reads the settings from a JSON file on disk.
@@ -54,5 +55,6 @@ func DefaultSettings() *Settings {
 			Mood:         "Direct, concise, and professional.",
 			Instructions: "Prioritize answering the user's questions clearly.",
 		},
+		GeminiRPM: 5,
 	}
 }
