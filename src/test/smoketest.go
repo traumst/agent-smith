@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -26,7 +27,7 @@ import (
 func RunSmokeTest(cfg *settings.Settings) {
 	fmt.Printf("Configured Mood: %s\n", cfg.SystemPrompt.Mood)
 
-	registry := gemini.NewModelRegistry()
+	registry := gemini.NewModelRegistry(time.Hour)
 	selectedModel := selectModelInteractive(registry.Models)
 	registry.SetActive(selectedModel)
 	fmt.Printf("grug use model: %s\n\n", selectedModel)

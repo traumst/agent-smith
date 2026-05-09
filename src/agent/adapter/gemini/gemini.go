@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"google.golang.org/genai"
 
+	"smithai/src/agent/availability"
 	"smithai/src/agent/protocol"
 	"smithai/src/agent/ratelimit"
 )
@@ -21,7 +24,7 @@ type Adapter struct {
 // NewAdapter creates a new Gemini adapter. rpm controls requests per minute (0 = no limit).
 func NewAdapter(client *genai.Client, model string, rpm int) *Adapter {
 	if model == "" {
-		model = NewModelRegistry().Active
+		model = NewModelRegistry(time.Hour).Active
 		fmt.Printf("Model not specified, using default model: %s\n", model)
 	}
 	return &Adapter{
@@ -153,6 +156,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		var totalTokens int
 		for resp, err := range a.client.Models.GenerateContentStream(ctx, a.model, contents, config) {
 			if err != nil {
+				a.checkError(err)
 				streamChan <- &protocol.Response{Error: err}
 				return err
 			}
@@ -195,6 +199,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 	} else {
 		resp, err := a.client.Models.GenerateContent(ctx, a.model, contents, config)
 		if err != nil {
+			a.checkError(err)
 			streamChan <- &protocol.Response{Error: err}
 			return err
 		}
@@ -221,4 +226,24 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 	}
 
 	return nil
+}
+
+func (a *Adapter) checkError(err error) {
+	if err == nil {
+		return
+	}
+
+	errStr := err.Error()
+	// Check for resource exhaustion or unavailable
+	// "429" or "ResourceExhausted"
+	// "503" or "Unavailable"
+	if contains(errStr, "429") || contains(errStr, "ResourceExhausted") ||
+		contains(errStr, "503") || contains(errStr, "Unavailable") {
+		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.model, err)
+		availability.MarkUnavailable(a.model, "model", errStr)
+	}
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }

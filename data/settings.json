@@ -4,5 +4,6 @@
     "mood": "Direct, concise, and professional.",
     "instructions": "Prioritize answering the user's questions clearly."
   },
-  "geminiRPM": 5
+  "geminiRPM": 5,
+  "modelRefreshInterval": "1:0:0.000"
 }

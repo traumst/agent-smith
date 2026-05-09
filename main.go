@@ -94,8 +94,33 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			registry := gemini.NewModelRegistry()
-			geminiAdapter := gemini.NewAdapter(client, registry.Active, cfg.GeminiRPM)
+			refreshInterval, err := settings.ParseTimespan(cfg.ModelRefreshInterval)
+			if err != nil {
+				log.Printf("Warning: failed to parse ModelRefreshInterval, using 1h: %v\n", err)
+				refreshInterval = time.Hour
+			}
+
+			registry := gemini.NewModelRegistry(refreshInterval)
+			// Initial refresh
+			if err := registry.Refresh(ctx, client); err != nil {
+				log.Printf("Warning: initial model refresh failed: %v\n", err)
+			}
+
+			// Background refresh loop
+			go func() {
+				ticker := time.NewTicker(refreshInterval)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-ticker.C:
+						if err := registry.Refresh(context.Background(), client); err != nil {
+							log.Printf("Error refreshing models: %v\n", err)
+						}
+					}
+				}
+			}()
+
+			geminiAdapter := gemini.NewAdapter(client, registry.GetActive(), cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)
