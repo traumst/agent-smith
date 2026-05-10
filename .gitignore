@@ -35,8 +35,9 @@ smithai
 run.sh
 .whitelist
 .blacklist
+.available
+.unavailable
 *.db
 *.db-shm
 *.db-wal
 *.txt
-.unavailable

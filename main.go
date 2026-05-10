@@ -101,21 +101,20 @@ func main() {
 			}
 
 			registry := gemini.NewModelRegistry(refreshInterval)
-			// Initial refresh
-			if err := registry.Refresh(ctx, client); err != nil {
-				log.Printf("Warning: initial model refresh failed: %v\n", err)
+			// Initial refresh only if no models loaded from .available
+			if len(registry.GetModels()) == 0 {
+				if err := registry.Refresh(ctx, client); err != nil {
+					log.Printf("Warning: initial model refresh failed: %v\n", err)
+				}
 			}
 
 			// Background refresh loop
 			go func() {
 				ticker := time.NewTicker(refreshInterval)
 				defer ticker.Stop()
-				for {
-					select {
-					case <-ticker.C:
-						if err := registry.Refresh(context.Background(), client); err != nil {
-							log.Printf("Error refreshing models: %v\n", err)
-						}
+				for range ticker.C {
+					if err := registry.Refresh(context.Background(), client); err != nil {
+						log.Printf("Error refreshing models: %v\n", err)
 					}
 				}
 			}()

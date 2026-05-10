@@ -3,8 +3,10 @@ package tools
 import (
 	"context"
 	"fmt"
+	"smithai/src/agent/availability"
 	"smithai/src/agent/protocol"
 )
+
 
 // Dispatcher manages available tools and handles executing them.
 type Dispatcher interface {
@@ -37,6 +39,8 @@ func NewBasicDispatcher() *BasicDispatcher {
 func (d *BasicDispatcher) Register(def protocol.ToolDef, handler Handler) {
 	d.tools[def.Name] = def
 	d.handlers[def.Name] = handler
+	// Mark as available when registered
+	availability.MarkAvailable(def.Name, "tool", "registered")
 }
 
 // Dispatch executes a registered tool.
@@ -48,11 +52,14 @@ func (d *BasicDispatcher) Dispatch(ctx context.Context, call protocol.ToolCall) 
 	return handler(ctx, call.Arguments)
 }
 
-// Definitions returns all registered tool definitions.
+// Definitions returns all registered tool definitions that are currently available.
 func (d *BasicDispatcher) Definitions() []protocol.ToolDef {
 	var defs []protocol.ToolDef
 	for _, def := range d.tools {
-		defs = append(defs, def)
+		if availability.IsAvailable(def.Name) {
+			defs = append(defs, def)
+		}
 	}
 	return defs
 }
+
