@@ -8,11 +8,22 @@ import (
 	"time"
 )
 
+// AvailabilityReason represents why an item is in its current state.
+type AvailabilityReason string
+
+const (
+	ReasonDiscovered        AvailabilityReason = "discovered"
+	ReasonRegistered        AvailabilityReason = "registered"
+	ReasonResourceExhausted AvailabilityReason = "resource_exhausted"
+	ReasonUnknownError      AvailabilityReason = "unknown_error"
+	ReasonNetworkError      AvailabilityReason = "network_error"
+)
+
 // Entry represents an item that is currently unavailable or available.
 type Entry struct {
 	ItemName string
 	ItemType string
-	Reason   string
+	Reason   AvailabilityReason
 	Time     time.Time
 }
 
@@ -63,7 +74,7 @@ func IsAvailable(name string) bool {
 }
 
 // MarkUnavailable appends an item to the .unavailable file.
-func MarkUnavailable(name, itemType, reason string) error {
+func MarkUnavailable(name, itemType string, reason AvailabilityReason) error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -79,7 +90,7 @@ func MarkUnavailable(name, itemType, reason string) error {
 	err = writer.Write([]string{
 		name,
 		itemType,
-		reason,
+		string(reason),
 		time.Now().UTC().Format(time.RFC3339),
 	})
 
@@ -91,7 +102,7 @@ func MarkUnavailable(name, itemType, reason string) error {
 }
 
 // MarkAvailable appends an item to the .available file.
-func MarkAvailable(name, itemType, reason string) error {
+func MarkAvailable(name, itemType string, reason AvailabilityReason) error {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -112,7 +123,7 @@ func MarkAvailable(name, itemType, reason string) error {
 	err = writer.Write([]string{
 		name,
 		itemType,
-		reason,
+		string(reason),
 		time.Now().UTC().Format(time.RFC3339),
 	})
 
@@ -152,7 +163,7 @@ func GetAvailable() ([]Entry, error) {
 		entries = append(entries, Entry{
 			ItemName: record[0],
 			ItemType: record[1],
-			Reason:   record[2],
+			Reason:   AvailabilityReason(record[2]),
 			Time:     t,
 		})
 	}

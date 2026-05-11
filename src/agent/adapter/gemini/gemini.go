@@ -237,10 +237,12 @@ func (a *Adapter) checkError(err error) {
 	// Check for resource exhaustion or unavailable
 	// "429" or "ResourceExhausted"
 	// "503" or "Unavailable"
-	if contains(errStr, "429") || contains(errStr, "ResourceExhausted") ||
-		contains(errStr, "503") || contains(errStr, "Unavailable") {
+	if contains(errStr, "429") || contains(errStr, "ResourceExhausted") {
 		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.model, err)
-		availability.MarkUnavailable(a.model, "model", errStr)
+		availability.MarkUnavailable(a.model, "model", availability.ReasonResourceExhausted)
+	} else if contains(errStr, "503") || contains(errStr, "Unavailable") {
+		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.model, err)
+		availability.MarkUnavailable(a.model, "model", availability.ReasonNetworkError)
 	}
 }
 

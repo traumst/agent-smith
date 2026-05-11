@@ -21,7 +21,7 @@ func TestAvailability(t *testing.T) {
 	}
 
 	// Mark unavailable
-	err := MarkUnavailable(name, "test", "testing")
+	err := MarkUnavailable(name, "test", ReasonUnknownError)
 	if err != nil {
 		t.Fatalf("MarkUnavailable failed: %v", err)
 	}
@@ -32,12 +32,12 @@ func TestAvailability(t *testing.T) {
 
 	// Wait 4 hours is hard to test without mocking time, 
 	// but let's try to overwrite the file with an old timestamp.
-	MarkUnavailable(name, "test", "old error") // This appends
+	MarkUnavailable(name, "test", ReasonUnknownError) // This appends
 	
 	// Manual overwrite to simulate 5 hours ago
 	f, _ := os.Create(".unavailable")
 	oldTime := time.Now().Add(-5 * time.Hour).UTC().Format(time.RFC3339)
-	f.WriteString(name + ",test,old error," + oldTime + "\n")
+	f.WriteString(name + ",test,resource_exhausted," + oldTime + "\n")
 	f.Close()
 
 	if !IsAvailable(name) {
@@ -45,7 +45,7 @@ func TestAvailability(t *testing.T) {
 	}
 
 	// Test MarkAvailable
-	err = MarkAvailable(name, "test", "found")
+	err = MarkAvailable(name, "test", ReasonDiscovered)
 	if err != nil {
 		t.Fatalf("MarkAvailable failed: %v", err)
 	}

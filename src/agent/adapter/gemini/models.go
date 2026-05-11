@@ -118,7 +118,7 @@ func (r *ModelRegistry) Refresh(ctx context.Context, client *genai.Client) error
 			seen[m.Name] = true
 
 			// Save to .available
-			availability.MarkAvailable(m.Name, "model", "discovered")
+			availability.MarkAvailable(m.Name, "model", availability.ReasonDiscovered)
 		}
 	}
 

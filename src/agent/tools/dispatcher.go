@@ -40,7 +40,7 @@ func (d *BasicDispatcher) Register(def protocol.ToolDef, handler Handler) {
 	d.tools[def.Name] = def
 	d.handlers[def.Name] = handler
 	// Mark as available when registered
-	availability.MarkAvailable(def.Name, "tool", "registered")
+	availability.MarkAvailable(def.Name, "tool", availability.ReasonRegistered)
 }
 
 // Dispatch executes a registered tool.

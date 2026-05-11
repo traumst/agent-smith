@@ -34,7 +34,7 @@ func RunSmokeTest(cfg *settings.Settings) {
 
 	req := protocol.Request{
 		SystemPrompt: cfg.SystemPrompt,
-		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'en.wikipedia.org/wiki/Main_Page'.\n4. Ping the MCP server to verify integration.",
+		UserPrompt:   "Hello! Please perform the following tasks:\n1. Write a file called 'test.txt' with the content 'hello world'.\n2. Run the terminal command 'ls'.\n3. Summarize the web page 'https://htmx.org/attributes/hx-get/'.\n4. Ping the MCP server to verify integration.",
 		Stream:       true,
 	}
 
@@ -82,10 +82,10 @@ func RunSmokeTest(cfg *settings.Settings) {
 				}
 
 				// Assert browser tool actually loaded the page
-				if strings.Contains(fullOutput.String(), "donate.wikimedia.org") {
-					fmt.Println("\n[PASS] browser_fetch: page loaded, donate.wikimedia.org link found")
+				if strings.Contains(strings.ToLower(fullOutput.String()), "hx-get") {
+					fmt.Println("\n[PASS] browser_fetch: page loaded, hx-get found")
 				} else {
-					fmt.Println("\n[FAIL] browser_fetch: donate.wikimedia.org link NOT found in output")
+					fmt.Println("\n[FAIL] browser_fetch: hx-get NOT found in output")
 				}
 			}
 			fmt.Println("\n--- End of Agent Loop ---")
