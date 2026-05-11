@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 
 	"google.golang.org/genai"
 
@@ -27,9 +25,7 @@ import (
 func RunSmokeTest(cfg *settings.Settings) {
 	fmt.Printf("Configured Mood: %s\n", cfg.SystemPrompt.Mood)
 
-	registry := gemini.NewModelRegistry(time.Hour)
-	selectedModel := selectModelInteractive(registry.Models)
-	registry.SetActive(selectedModel)
+	selectedModel := "models/gemini-2.5-flash-lite"
 	fmt.Printf("grug use model: %s\n\n", selectedModel)
 
 	req := protocol.Request{
@@ -153,75 +149,4 @@ func RunSmokeTest(cfg *settings.Settings) {
 		return
 	}
 	fmt.Printf("Vector Search Results: %+v\n", results)
-}
-
-func selectModelInteractive(models []gemini.ModelTier) string {
-	// Save current stty state
-	cmd := exec.Command("stty", "-g")
-	cmd.Stdin = os.Stdin
-	state, err := cmd.Output()
-	if err != nil {
-		// Fallback if stty not available
-		return models[0].Stable
-	}
-
-	// Set raw mode
-	cmdRaw := exec.Command("stty", "-icanon", "-echo")
-	cmdRaw.Stdin = os.Stdin
-	cmdRaw.Run()
-
-	// Restore original state
-	defer func() {
-		cmdRestore := exec.Command("stty", strings.TrimSpace(string(state)))
-		cmdRestore.Stdin = os.Stdin
-		cmdRestore.Run()
-	}()
-
-	// Hide cursor
-	fmt.Print("\033[?25l")
-	defer fmt.Print("\033[?25h")
-
-	selectedIndex := 0
-
-	for {
-		// Clear current line
-		fmt.Print("\r\033[K")
-		fmt.Println("\npick model (up/down arrows, space/enter to select):")
-		for i, m := range models {
-			if i == selectedIndex {
-				fmt.Printf("\033[K> %s\n", m.Name)
-			} else {
-				fmt.Printf("\033[K  %s\n", m.Name)
-			}
-		}
-
-		b := make([]byte, 3)
-		os.Stdin.Read(b)
-
-		if b[0] == '\n' || b[0] == '\r' || b[0] == ' ' {
-			// Clear the menu lines we drew
-			fmt.Printf("\033[%dA\033[J", len(models)+2)
-			return models[selectedIndex].Stable
-		}
-
-		if b[0] == 27 && b[1] == '[' {
-			if b[2] == 'A' {
-				selectedIndex--
-				if selectedIndex < 0 {
-					selectedIndex = len(models) - 1
-				}
-			} else if b[2] == 'B' {
-				selectedIndex++
-				if selectedIndex >= len(models) {
-					selectedIndex = 0
-				}
-			}
-		} else if b[0] == 3 {
-			fmt.Printf("\033[%dA\033[J", len(models)+2)
-			fmt.Print("\033[?25h")
-			os.Exit(1)
-		}
-
-		fmt.Printf("\033[%dA", len(models)+2)
-	}
 }
