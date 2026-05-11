@@ -93,7 +93,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Build the interactive web frontend without complex build steps.
 
-1. **Template Setup:** Create base Go HTML templates (`src/ui/templates`) and link Vanilla CSS/JS (`src/ui/static`). Use Go `embed` directive to bundle static assets into the binary.
+1. **Template Setup:** Create base Go HTML templates (`src/ui/static/templates`) and link Vanilla CSS/JS (`src/ui/static`). Use Go `embed` directive to bundle static assets into the binary.
 2. **HTMX Integration:** Vendor HTMX (latest stable from CDN, bundled into `static/`). Use HTMX to submit chat forms and consume the SSE stream from the API layer natively.
 3. **Interactivity:** Add simple, modern visual cues: highlight on hover/click/fail, and Vanilla JS toasters to confirm success or inform of issues.
 4. **Consent UI:** Replace the headless stdin/stdout consent prompts from Phase 3 with proper UI dialogs for the "pause and consent" workflow.

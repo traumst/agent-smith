@@ -92,26 +92,24 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 5.1: Static Assets & Templates
 
-- [ ] Create base HTML templates in `src/ui/templates`.
-- [ ] Add Vanilla CSS and JS files in `src/ui/static`.
-- [ ] Use the Go `embed` directive to bundle static assets into the binary.
-- [ ] **Wiring:** Serve the static files and templates via the API layer, verify they load correctly in a local browser.
+- [x] Create base HTML templates in `src/ui/static/templates`.
+- [x] Add Vanilla CSS and JS files in `src/ui/static`.
+- [x] Use the Go `embed` directive to bundle static assets into the binary.
+- [x] **Wiring:** Serve the static files and templates via the API layer, verify they load correctly in a local browser.
 
 ### Step 5.2: HTMX & UI Interactivity
 
-- [ ] Vendor HTMX into `static/` and wire it up to the chat forms.
-- [ ] Consume the API's SSE stream using HTMX to render live chat updates.
-- [ ] Implement UI components for interactivity (highlight on hover/click/fail) and toast notifications for errors/success.
-- [ ] Replace headless (stdin/stdout) consent prompts with interactive UI dialogs.
-- [ ] **Wiring:** Fully interact with the agent through the web UI to verify end-to-end functionality.
+- [x] Vendor HTMX into `static/` and wire it up to the chat forms.
+- [x] Consume the API's SSE stream using HTMX to render live chat updates.
+- [x] Implement UI components for interactivity (highlight on hover/click/fail) and toast notifications for errors/success.
+- [x] Replace headless (stdin/stdout) consent prompts with interactive UI dialogs.
+- [x] **Wiring:** Fully interact with the agent through the web UI to verify end-to-end functionality.
 
-## Phase 6: Refinement & Advanced Features
+### Step 6.1: Code Polish & Documentation [COMPLETE]
 
-### Step 6.1: Code Polish & Documentation
-
-- [ ] Review codebase to enforce the "Grug brain" rule (simplicity, no magic, clean structure, standard library focus).
-- [ ] Remove any unnecessary comments; ensure comments only explain complex design choices.
-- [ ] Update `README.md` with build instructions, configuration options, and architecture overview.
+- [x] Review codebase to enforce the "Grug brain" rule (simplicity, no magic, clean structure, standard library focus).
+- [x] Remove any unnecessary comments; ensure comments only explain complex design choices.
+- [x] Update `README.md` with build instructions, configuration options, and architecture overview.
 
 ### Step 6.2: Final Testing
 

@@ -140,8 +140,6 @@ func (a *Agent) callLLM(ctx context.Context, req *protocol.Request, outChan chan
 
 	return fullResponse, finalDoneResp, streamErr
 }
-
-// executeTools dispatches tool calls, streams results to outChan, and appends to request history.
 func (a *Agent) executeTools(ctx context.Context, req *protocol.Request, response protocol.Message, outChan chan<- *protocol.Response) {
 	req.History = append(req.History, response)
 	toolResultsMsg := protocol.Message{Role: "user"}
@@ -165,9 +163,6 @@ func (a *Agent) executeTools(ctx context.Context, req *protocol.Request, respons
 
 	req.History = append(req.History, toolResultsMsg)
 }
-
-// parseRetryDelay extracts "retry in Xs" from error message, rounds up to whole seconds.
-// Returns 0 if no retry delay found.
 func parseRetryDelay(err error) time.Duration {
 	re := regexp.MustCompile(`(?i)retry in ([0-9.]+)s`)
 	matches := re.FindStringSubmatch(err.Error())

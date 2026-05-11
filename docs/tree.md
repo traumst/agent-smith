@@ -27,7 +27,10 @@ smithai/
 │   ├── ui/                   # UI Layer
 │   │   ├── embed.go          # Embedded FS definitions
 │   │   └── static/           # Static assets
-│   │       └── templates/    # Go HTML templates (moved under static)
+│   │       ├── templates/    # Go HTML templates
+│   │       ├── app.css       # Vanilla CSS
+│   │       ├── app.js        # Vanilla JS
+│   │       └── htmx.min.js   # Vendored HTMX
 │   └── test/                 # Test utilities
 ├── data/                     # Default persistence directory (git-ignored)
 ├── main.go                   # Main entry point

@@ -9,7 +9,7 @@
 The project follows a strict "standard library first" policy (Requirement #8). The following are the only approved exceptions:
 
 1. **`mattn/go-sqlite3`** (CGO) — Go has no built-in SQLite support. CGO is acceptable for our use case: we ship a compiled binary, serve a web UI, and have no WASM targets. Provides extension loading required for `sqlite-vec`.
-2. **`sqlite-vec`** — Lightweight SQLite extension for vector similarity search. Loaded at runtime via `mattn/go-sqlite3`. Powers keyword-based lookups into long-term memory files without introducing a separate vector database.
+2. **`github.com/asg017/sqlite-vec-go-bindings/cgo`** — Lightweight SQLite extension for vector similarity search. Bundled via CGO bindings. Powers keyword-based lookups into long-term memory files without introducing a separate vector database.
 3. **`chromedp`** (`github.com/chromedp/chromedp`) — Pure Go Chrome DevTools Protocol client. Used for two purposes: (a) the agent's web browser tool, allowing interaction with full web pages, and (b) simulation/end-to-end tests against the SmithAI web UI. Communicates directly with a local Chrome/Chromium installation — no external driver binaries.
 4. **`google.golang.org/genai`** — Official Gemini Go SDK for native integration with the Gemini API.
 

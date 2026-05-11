@@ -141,8 +141,6 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 			Parts: parts,
 		})
 	}
-
-	// Add User Prompt
 	if req.UserPrompt != "" {
 		contents = append(contents, &genai.Content{
 			Role: "user",
@@ -164,8 +162,6 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 			if resp == nil {
 				continue
 			}
-
-			// Process chunk
 			pr := &protocol.Response{}
 
 			// Map Usage Metadata
@@ -173,8 +169,6 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 				pr.TokensUsed = int(resp.UsageMetadata.TotalTokenCount)
 				totalTokens = pr.TokensUsed
 			}
-
-			// Map Text
 			if len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil {
 				for _, part := range resp.Candidates[0].Content.Parts {
 					if part.Text != "" {
