@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
+	serviceusage "google.golang.org/api/serviceusage/v1beta1"
 	"google.golang.org/genai"
 
 	"smithai/src/agent/availability"
@@ -66,59 +69,44 @@ func (r *ModelRegistry) Load() {
 
 // Refresh fetches the list of models from the Gemini API and updates the registry.
 func (r *ModelRegistry) Refresh(ctx context.Context, client *genai.Client) error {
+	projectID := os.Getenv("PROJECT_ID")
+	quotaModels := getQuotaModels(ctx, projectID)
+
 	models, err := client.Models.List(ctx, &genai.ListModelsConfig{})
 	if err != nil {
 		return fmt.Errorf("failed to list models: %w", err)
 	}
 
-	var newModels []ModelTier
-	seen := make(map[string]bool)
-
 	r.mu.RLock()
+	seen := make(map[string]bool)
 	for _, m := range r.Models {
 		seen[m.Stable] = true
 	}
 	r.mu.RUnlock()
 
+	var newModels []ModelTier
 	for _, m := range models.Items {
-		// Filter out unavailable models
 		if !availability.IsAvailable(m.Name) {
 			continue
 		}
 
-		supportsGenerate := false
-		supportsEmbed := false
-		for _, action := range m.SupportedActions {
-			if action == "generateContent" {
-				supportsGenerate = true
-			}
-			if action == "embedContent" {
-				supportsEmbed = true
-			}
+		if !isTextModel(m, projectID, quotaModels) {
+			continue
 		}
 
-		if supportsGenerate || supportsEmbed {
-			if seen[m.Name] {
-				// Already in registry, but let's make sure it's in newModels for the final state
-				newModels = append(newModels, ModelTier{
-					Name:         m.DisplayName,
-					Stable:       m.Name,
-					Experimental: m.Name,
-				})
-				continue
-			}
+		if !isGenerateModel(m) {
+			continue
+		}
 
-			// New model found!
-			newTier := ModelTier{
-				Name:         m.DisplayName,
-				Stable:       m.Name,
-				Experimental: m.Name,
-			}
-			newModels = append(newModels, newTier)
-			seen[m.Name] = true
+		newModels = append(newModels, ModelTier{
+			Name:         m.DisplayName,
+			Stable:       m.Name,
+			Experimental: m.Name,
+		})
 
-			// Save to .available
+		if !seen[m.Name] {
 			availability.MarkAvailable(m.Name, "model", availability.ReasonDiscovered)
+			seen[m.Name] = true
 		}
 	}
 
@@ -127,8 +115,74 @@ func (r *ModelRegistry) Refresh(ctx context.Context, client *genai.Client) error
 	r.LastRefresh = time.Now()
 	r.mu.Unlock()
 
-	log.Printf("Fetched %d models from Gemini API (updated .available if needed)\n", len(newModels))
+	log.Printf("Fetched %d models from Gemini API (filtered by category and quota)\n", len(newModels))
 	return nil
+}
+
+func getQuotaModels(ctx context.Context, projectID string) map[string]bool {
+	quotaModels := make(map[string]bool)
+	if projectID == "" {
+		return quotaModels
+	}
+
+	svc, err := serviceusage.NewService(ctx)
+	if err != nil {
+		log.Printf("Warning: failed to create service usage client: %v\n", err)
+		return quotaModels
+	}
+
+	parent := fmt.Sprintf("projects/%s/services/aiplatform.googleapis.com", projectID)
+	resp, err := svc.Services.ConsumerQuotaMetrics.List(parent).Do()
+	if err != nil {
+		log.Printf("Warning: failed to list quota metrics: %v\n", err)
+		return quotaModels
+	}
+
+	for _, metric := range resp.Metrics {
+		if !strings.Contains(metric.DisplayName, "Text-out models") {
+			continue
+		}
+
+		for _, limit := range metric.ConsumerQuotaLimits {
+			for _, bucket := range limit.QuotaBuckets {
+				if bucket.EffectiveLimit > 0 {
+					parts := strings.Split(metric.DisplayName, " - ")
+					if len(parts) >= 3 {
+						quotaModels[parts[2]] = true
+					}
+				}
+			}
+		}
+	}
+	return quotaModels
+}
+
+func isTextModel(m *genai.Model, projectID string, quotaModels map[string]bool) bool {
+	if projectID != "" {
+		for qm := range quotaModels {
+			if strings.Contains(m.DisplayName, qm) || strings.Contains(qm, m.DisplayName) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// heuristic fallback
+	return !strings.Contains(m.Name, "-tts") &&
+		!strings.Contains(m.Name, "-image") &&
+		!strings.Contains(m.Name, "-clip") &&
+		!strings.Contains(m.Name, "-embedding") &&
+		!strings.Contains(m.Name, "robotics") &&
+		!strings.Contains(m.Name, "deep-research")
+}
+
+func isGenerateModel(m *genai.Model) bool {
+	for _, action := range m.SupportedActions {
+		if action == "generateContent" {
+			return true
+		}
+	}
+	return false
 }
 
 // GetModels returns a copy of the available models.
@@ -151,4 +205,3 @@ func (r *ModelRegistry) GetActive() string {
 	defer r.mu.RUnlock()
 	return r.Active
 }
-
