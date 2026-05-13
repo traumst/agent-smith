@@ -7,18 +7,43 @@ import (
 	"net/http"
 	"strconv"
 
+	"smithai/src/agent/adapter/gemini"
 	"smithai/src/persistence/history"
+	"smithai/src/persistence/settings"
 )
 
 // UIHandler serves the web interface.
 type UIHandler struct {
-	Templates *template.Template
-	DB        *sql.DB
+	Templates    map[string]*template.Template
+	DB           *sql.DB
+	Registry     *gemini.ModelRegistry
+	SettingsPath string
 }
 
 // Index renders the chat page.
 func (h *UIHandler) Index(w http.ResponseWriter, r *http.Request) {
-	if err := h.Templates.ExecuteTemplate(w, "chat.html", nil); err != nil {
+	cfg, _ := settings.LoadSettings(h.SettingsPath)
+	data := map[string]interface{}{
+		"ActiveModel": h.Registry.GetActive(),
+		"Models":      h.Registry.GetModels(),
+		"Settings":    cfg,
+	}
+	if err := h.Templates["chat.html"].Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Settings renders the settings page.
+func (h *UIHandler) Settings(w http.ResponseWriter, r *http.Request) {
+	cfg, err := settings.LoadSettings(h.SettingsPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := map[string]interface{}{
+		"Settings": cfg,
+	}
+	if err := h.Templates["settings.html"].Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -41,7 +66,7 @@ func (h *UIHandler) HistoryList(w http.ResponseWriter, r *http.Request) {
 		"HasMore":    len(sessions) == limit,
 	}
 
-	if err := h.Templates.ExecuteTemplate(w, "history_list.html", data); err != nil {
+	if err := h.Templates["history_list.html"].Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

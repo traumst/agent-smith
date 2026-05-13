@@ -266,3 +266,32 @@ function loadSession(sessionId) {
   // Simple navigation for now, later could be HTMX swap
   window.location.href = `/?session_id=${sessionId}`;
 }
+
+// ---- Model Management ----
+
+async function updateModel() {
+  const select = document.getElementById("model-select");
+  if (!select) return;
+  const modelId = select.value;
+  
+  try {
+    const resp = await fetch("/api/settings");
+    if (!resp.ok) throw new Error("Could not load settings");
+    const cfg = await resp.json();
+    cfg.activeModel = modelId;
+    
+    const saveResp = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cfg),
+    });
+    
+    if (saveResp.ok) {
+      showToast(`Model switched to ${modelId}`, "success");
+    } else {
+      throw new Error("Failed to save settings");
+    }
+  } catch (err) {
+    showToast("Failed to update model: " + err.message, "error");
+  }
+}

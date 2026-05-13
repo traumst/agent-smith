@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"smithai/src/agent/adapter/gemini"
 	"smithai/src/persistence/settings"
 )
 
 // SettingsHandler manages the settings endpoints.
 type SettingsHandler struct {
-	Path string
+	Path     string
+	Registry *gemini.ModelRegistry
 }
 
 // Get returns the current settings.
@@ -34,5 +36,6 @@ func (h *SettingsHandler) Post(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	h.Registry.SetActive(cfg.ActiveModel)
 	w.WriteHeader(http.StatusOK)
 }

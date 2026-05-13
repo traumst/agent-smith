@@ -32,10 +32,10 @@ type ModelRegistry struct {
 }
 
 // NewModelRegistry creates a new ModelRegistry and loads available models.
-func NewModelRegistry(refreshInterval time.Duration) *ModelRegistry {
+func NewModelRegistry(activeModel string, refreshInterval time.Duration) *ModelRegistry {
 	r := &ModelRegistry{
 		Models:          []ModelTier{},
-		Active:          "gemini-2.5-flash-lite", // default fallback
+		Active:          activeModel,
 		RefreshInterval: refreshInterval,
 	}
 	r.Load()

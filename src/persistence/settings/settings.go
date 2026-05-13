@@ -11,6 +11,7 @@ import (
 
 // Settings encapsulates the overall configuration for the agent.
 type Settings struct {
+	ActiveModel  string                `json:"activeModel"`
 	SystemPrompt protocol.SystemPrompt `json:"systemPrompt"`
 	GeminiRPM            int                   `json:"geminiRPM"`
 	ModelRefreshInterval string                `json:"modelRefreshInterval"`
@@ -60,6 +61,7 @@ func SaveSettings(path string, s *Settings) error {
 // DefaultSettings returns a set of basic default settings.
 func DefaultSettings() *Settings {
 	return &Settings{
+		ActiveModel: "gemini-2.0-flash",
 		SystemPrompt: protocol.SystemPrompt{
 			Competence:   "You are an expert, helpful AI assistant named Smith.",
 			Mood:         "Direct, concise, and professional.",

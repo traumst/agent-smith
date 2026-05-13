@@ -1,0 +1,109 @@
+{{template "base.html" .}}
+
+{{define "content"}}
+<div class="h-full flex flex-col overflow-y-auto">
+  <!-- Header -->
+  <header class="flex-shrink-0 border-b border-gray-800 px-6 py-4 flex justify-between items-center bg-gray-950/50 backdrop-blur-md sticky top-0 z-10">
+    <div class="flex items-center gap-3">
+      <a href="/" class="text-gray-400 hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </a>
+      <h1 class="text-lg font-semibold text-white">Settings</h1>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-10">
+    <form id="settings-form" class="space-y-10"
+          hx-post="/api/settings"
+          hx-ext="json-enc"
+          hx-trigger="submit"
+          hx-swap="none"
+          onhtmx:after-request="if(event.detail.successful) showToast('Settings saved successfully', 'success')">
+
+      <!-- System Prompt Section -->
+      <section class="space-y-6">
+        <div class="flex items-center gap-2 text-blue-400 font-medium">
+          <span>🧠</span>
+          <h2 class="text-sm uppercase tracking-wider">System Prompt</h2>
+        </div>
+        
+        <div class="space-y-4 bg-gray-900/50 border border-gray-800 rounded-2xl p-6 shadow-xl">
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Competence</label>
+            <textarea name="systemPrompt.competence" rows="3" 
+                      class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-100 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none">{{.Settings.SystemPrompt.Competence}}</textarea>
+            <p class="text-xs text-gray-500 italic">What the agent knows and its core role.</p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Mood</label>
+            <input type="text" name="systemPrompt.mood" value="{{.Settings.SystemPrompt.Mood}}"
+                   class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-100 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+            <p class="text-xs text-gray-500 italic">Tone and personality (e.g. "Direct, concise", "Pirate").</p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Instructions</label>
+            <textarea name="systemPrompt.instructions" rows="3" 
+                      class="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-100 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none">{{.Settings.SystemPrompt.Instructions}}</textarea>
+            <p class="text-xs text-gray-500 italic">Fixed behavioral rules or constraints.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- API Section -->
+      <section class="space-y-6">
+        <div class="flex items-center gap-2 text-emerald-400 font-medium">
+          <span>⚡</span>
+          <h2 class="text-sm uppercase tracking-wider">API Configuration</h2>
+        </div>
+
+        <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between gap-4">
+            <div class="space-y-1">
+              <label class="text-sm font-medium text-gray-200">Gemini Rate Limit (RPM)</label>
+              <p class="text-xs text-gray-500">Maximum requests per minute to Gemini API.</p>
+            </div>
+            <input type="number" name="geminiRPM" value="{{.Settings.GeminiRPM}}" min="1" max="100"
+                   class="w-24 bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-2 text-gray-100 text-sm focus:outline-none focus:border-blue-500 transition-all">
+          </div>
+        </div>
+      </section>
+
+      <!-- Hidden field for active model to keep it consistent if it was changed in chat -->
+      <input type="hidden" name="activeModel" value="{{.Settings.ActiveModel}}">
+      <input type="hidden" name="modelRefreshInterval" value="{{.Settings.ModelRefreshInterval}}">
+
+      <div class="pt-6 flex justify-end">
+        <button type="submit" 
+                class="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-95">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </main>
+</div>
+
+<script>
+document.body.addEventListener('htmx:configRequest', (event) => {
+  if (event.detail.target.id === 'settings-form') {
+    const formData = new FormData(event.detail.elt);
+    const obj = {
+      systemPrompt: {}
+    };
+    formData.forEach((value, key) => {
+      if (key.startsWith('systemPrompt.')) {
+        obj.systemPrompt[key.split('.')[1]] = value;
+      } else if (key === 'geminiRPM') {
+        obj[key] = parseInt(value, 10);
+      } else {
+        obj[key] = value;
+      }
+    });
+    event.detail.parameters = obj;
+  }
+});
+</script>
+{{end}}

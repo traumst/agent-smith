@@ -84,6 +84,13 @@ func main() {
 		log.Fatalf("Failed to create memory store: %v\n", err)
 	}
 
+	refreshInterval, err := settings.ParseTimespan(cfg.ModelRefreshInterval)
+	if err != nil {
+		log.Printf("Warning: failed to parse ModelRefreshInterval, using 1h: %v\n", err)
+		refreshInterval = time.Hour
+	}
+	registry := gemini.NewModelRegistry(cfg.ActiveModel, refreshInterval)
+
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	var agent *loop.Agent
 	if apiKey == "" {
@@ -94,13 +101,6 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			refreshInterval, err := settings.ParseTimespan(cfg.ModelRefreshInterval)
-			if err != nil {
-				log.Printf("Warning: failed to parse ModelRefreshInterval, using 1h: %v\n", err)
-				refreshInterval = time.Hour
-			}
-
-			registry := gemini.NewModelRegistry(refreshInterval)
 			// Initial refresh only if no models loaded from .available
 			if len(registry.GetModels()) == 0 {
 				if err := registry.Refresh(ctx, client); err != nil {
@@ -119,7 +119,7 @@ func main() {
 				}
 			}()
 
-			geminiAdapter := gemini.NewAdapter(client, registry.GetActive(), cfg.GeminiRPM)
+			geminiAdapter := gemini.NewAdapter(client, registry, cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)
@@ -159,13 +159,19 @@ func main() {
 	mux := http.NewServeMux()
 
 	// UI routes
-	uiHandler := &handlers.UIHandler{Templates: templates, DB: sqliteDB}
+	uiHandler := &handlers.UIHandler{
+		Templates:    templates,
+		DB:           sqliteDB,
+		Registry:     registry,
+		SettingsPath: settingsPath,
+	}
 	mux.HandleFunc("GET /", uiHandler.Index)
 	mux.Handle("GET /static/", handlers.StaticHandler(ui.StaticFS))
 	mux.HandleFunc("GET /ui/history", uiHandler.HistoryList)
+	mux.HandleFunc("GET /ui/settings", uiHandler.Settings)
 
 	// API routes
-	settingsHandler := &handlers.SettingsHandler{Path: settingsPath}
+	settingsHandler := &handlers.SettingsHandler{Path: settingsPath, Registry: registry}
 	historyHandler := &handlers.HistoryHandler{DB: sqliteDB}
 	memoryHandler := &handlers.MemoryHandler{Store: memStore}
 	chatHandler := &handlers.ChatHandler{Agent: agent, DB: sqliteDB, ConsentChan: consentChan}

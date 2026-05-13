@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"google.golang.org/genai"
 
@@ -46,7 +47,8 @@ func RunSmokeTest(cfg *settings.Settings) {
 		if err != nil {
 			fmt.Printf("Failed to create genai client: %v\n", err)
 		} else {
-			geminiAdapter := gemini.NewAdapter(client, selectedModel, cfg.GeminiRPM)
+			registry := gemini.NewModelRegistry(selectedModel, time.Hour)
+			geminiAdapter := gemini.NewAdapter(client, registry, cfg.GeminiRPM)
 			dispatcher := tools.NewBasicDispatcher()
 
 			tools.RegisterFSTools(dispatcher)

@@ -1,4 +1,5 @@
 {
+  "activeModel": "models/gemini-3-pro-preview",
   "systemPrompt": {
     "competence": "You are an expert, helpful AI assistant named Smith.",
     "mood": "Direct, concise, and professional.",

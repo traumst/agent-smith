@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"google.golang.org/genai"
 
@@ -16,21 +15,17 @@ import (
 
 // Adapter implements the adapter.Adapter interface for the Gemini API.
 type Adapter struct {
-	client  *genai.Client
-	model   string
-	limiter *ratelimit.Limiter
+	client   *genai.Client
+	registry *ModelRegistry
+	limiter  *ratelimit.Limiter
 }
 
 // NewAdapter creates a new Gemini adapter. rpm controls requests per minute (0 = no limit).
-func NewAdapter(client *genai.Client, model string, rpm int) *Adapter {
-	if model == "" {
-		model = NewModelRegistry(time.Hour).Active
-		fmt.Printf("Model not specified, using default model: %s\n", model)
-	}
+func NewAdapter(client *genai.Client, registry *ModelRegistry, rpm int) *Adapter {
 	return &Adapter{
-		client:  client,
-		model:   model,
-		limiter: ratelimit.NewLimiter(rpm),
+		client:   client,
+		registry: registry,
+		limiter:  ratelimit.NewLimiter(rpm),
 	}
 }
 
@@ -152,7 +147,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 
 	if req.Stream {
 		var totalTokens int
-		for resp, err := range a.client.Models.GenerateContentStream(ctx, a.model, contents, config) {
+		for resp, err := range a.client.Models.GenerateContentStream(ctx, a.registry.GetActive(), contents, config) {
 			if err != nil {
 				a.checkError(err)
 				streamChan <- &protocol.Response{Error: err}
@@ -191,7 +186,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		streamChan <- &protocol.Response{Done: true, TokensUsed: totalTokens}
 
 	} else {
-		resp, err := a.client.Models.GenerateContent(ctx, a.model, contents, config)
+		resp, err := a.client.Models.GenerateContent(ctx, a.registry.GetActive(), contents, config)
 		if err != nil {
 			a.checkError(err)
 			streamChan <- &protocol.Response{Error: err}
@@ -232,11 +227,11 @@ func (a *Adapter) checkError(err error) {
 	// "429" or "ResourceExhausted"
 	// "503" or "Unavailable"
 	if contains(errStr, "429") || contains(errStr, "ResourceExhausted") {
-		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.model, err)
-		availability.MarkUnavailable(a.model, "model", availability.ReasonResourceExhausted)
+		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.registry.GetActive(), err)
+		availability.MarkUnavailable(a.registry.GetActive(), "model", availability.ReasonResourceExhausted)
 	} else if contains(errStr, "503") || contains(errStr, "Unavailable") {
-		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.model, err)
-		availability.MarkUnavailable(a.model, "model", availability.ReasonNetworkError)
+		fmt.Printf("Marking model %s as unavailable due to error: %v\n", a.registry.GetActive(), err)
+		availability.MarkUnavailable(a.registry.GetActive(), "model", availability.ReasonNetworkError)
 	}
 }
 
