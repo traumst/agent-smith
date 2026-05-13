@@ -32,6 +32,7 @@ go.work.sum
 # .vscode/
 
 agentsmith
+smithai
 run.sh
 smoketest.sh
 .whitelist
