@@ -11,6 +11,7 @@ import (
 	"smithai/src/agent/protocol"
 	"smithai/src/persistence/history"
 	"smithai/src/persistence/settings"
+	"encoding/json"
 )
 
 // UIHandler serves the web interface.
@@ -94,6 +95,39 @@ func (h *UIHandler) DeleteChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// BranchChat creates a new session from an old one up to a specific message.
+func (h *UIHandler) BranchChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		OldSessionID string `json:"old_session_id"`
+		NewSessionID string `json:"new_session_id"`
+		Index        int    `json:"index"`
+		Role         string `json:"role"`
+		Content      string `json:"content"`
+		Model        string `json:"model"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	msg := protocol.Message{
+		Role:    req.Role,
+		Content: req.Content,
+		Model:   req.Model,
+	}
+
+	if err := history.BranchSession(h.DB, req.OldSessionID, req.NewSessionID, req.Index, msg); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 

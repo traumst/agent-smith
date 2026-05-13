@@ -61,9 +61,22 @@ function appendMessage(role, content, model, timestamp) {
   bubble.innerHTML = escapeAndFormat(content);
   bubbleContainer.appendChild(bubble);
 
+  // Actions
+  const actions = document.createElement("div");
+  actions.className = "absolute -bottom-2 -right-2 flex items-center gap-1 z-10";
+
+  // Edit Button
+  const msgIndex = chat.querySelectorAll(".chat-content").length;
+  const editBtn = document.createElement("button");
+  editBtn.className = "w-5 h-5 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-400 hover:border-emerald-500 hover:text-emerald-400 shadow-lg transition-all";
+  editBtn.title = "Edit & Branch";
+  editBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+  editBtn.onclick = (e) => editMessage(editBtn, msgIndex, role, model);
+  actions.appendChild(editBtn);
+
   // Info Icon
   const infoIcon = document.createElement("div");
-  infoIcon.className = "absolute -bottom-2 -right-2 w-5 h-5 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-400 cursor-help transition-all shadow-lg z-10 hover:border-blue-500 hover:text-blue-400 group/info";
+  infoIcon.className = "w-5 h-5 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-400 cursor-help transition-all shadow-lg hover:border-blue-500 hover:text-blue-400 group/info";
   infoIcon.innerHTML = "i";
   
   // Tooltip
@@ -74,7 +87,8 @@ function appendMessage(role, content, model, timestamp) {
   tooltip.innerHTML = tooltipHtml;
   
   infoIcon.appendChild(tooltip);
-  bubbleContainer.appendChild(infoIcon);
+  actions.appendChild(infoIcon);
+  bubbleContainer.appendChild(actions);
   wrapper.appendChild(bubbleContainer);
 
   if (role === "assistant" && model) {
@@ -367,3 +381,95 @@ function confirmDeleteChat() {
       }
     });
 }
+
+async function editMessage(btn, index, role, model) {
+  const bubbleContainer = btn.closest(".relative.max-w-\\[75\\%\\]");
+  const contentEl = bubbleContainer.querySelector(".chat-content");
+  const originalText = contentEl.innerText;
+  
+  // Hide actions
+  const actions = bubbleContainer.querySelector(".flex.items-center.gap-1.z-10");
+  actions.classList.add("hidden");
+  
+  // Create editor
+  const editor = document.createElement("div");
+  editor.className = "flex flex-col gap-2 mt-2";
+  
+  const textarea = document.createElement("textarea");
+  textarea.className = "w-full bg-gray-800 border border-gray-600 rounded p-2 text-sm text-white focus:outline-none focus:border-emerald-500 min-h-[100px]";
+  textarea.value = originalText;
+  
+  const btnRow = document.createElement("div");
+  btnRow.className = "flex gap-2 justify-end";
+  
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] px-3 py-1 rounded transition-colors";
+  saveBtn.textContent = "Branch & Save";
+  
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "bg-gray-700 hover:bg-gray-600 text-gray-300 text-[10px] px-3 py-1 rounded transition-colors";
+  cancelBtn.textContent = "Cancel";
+  
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(saveBtn);
+  editor.appendChild(textarea);
+  editor.appendChild(btnRow);
+  
+  // Hide original content and show editor
+  contentEl.classList.add("hidden");
+  bubbleContainer.appendChild(editor);
+  textarea.focus();
+  
+  cancelBtn.onclick = () => {
+    editor.remove();
+    contentEl.classList.remove("hidden");
+    actions.classList.remove("hidden");
+  };
+  
+  saveBtn.onclick = async () => {
+    const newContent = textarea.value;
+    if (newContent === originalText) {
+       cancelBtn.onclick();
+       return;
+    }
+    
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Branching...";
+    
+    const newSessionId = crypto.randomUUID();
+    try {
+      const resp = await fetch("/ui/branch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          old_session_id: SESSION_ID,
+          new_session_id: newSessionId,
+          index: index,
+          role: role,
+          content: newContent,
+          model: model || ""
+        })
+      });
+      
+      if (resp.ok) {
+        // We set a flag in sessionStorage to show the toast after redirect
+        sessionStorage.setItem('show_branched_toast', 'true');
+        window.location.href = `/?session_id=${newSessionId}`;
+      } else {
+        throw new Error("Failed to branch");
+      }
+    } catch (err) {
+      showToast("Failed to branch chat: " + err.message, "error");
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Branch & Save";
+    }
+  };
+}
+
+// Check for branched toast on load
+document.addEventListener("DOMContentLoaded", () => {
+  if (sessionStorage.getItem('show_branched_toast')) {
+    showToast("Chat branched", "success");
+    sessionStorage.removeItem('show_branched_toast');
+  }
+});

@@ -42,3 +42,4 @@ smoketest.sh
 *.db-shm
 *.db-wal
 *.txt
+.media/

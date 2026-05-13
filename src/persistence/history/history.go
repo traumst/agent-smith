@@ -132,3 +132,54 @@ func DeleteSession(db *sql.DB, sessionID string) error {
 	}
 	return nil
 }
+
+// BranchSession clones a session up to a certain message index (0-based) and adds a new message.
+func BranchSession(db *sql.DB, oldSessionID, newSessionID string, upToIdx int, newMsg protocol.Message) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Get history for old session
+	query := `SELECT role, content, model, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at ASC`
+	rows, err := tx.Query(query, oldSessionID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var history []protocol.Message
+	for rows.Next() {
+		var msg protocol.Message
+		var model sql.NullString
+		var createdAt string
+		if err := rows.Scan(&msg.Role, &msg.Content, &model, &createdAt); err != nil {
+			return err
+		}
+		if model.Valid {
+			msg.Model = model.String
+		}
+		history = append(history, msg)
+	}
+
+	// 2. Insert messages up to upToIdx into new session
+	insertQuery := `INSERT INTO chat_history (session_id, role, content, model, created_at) VALUES (?, ?, ?, ?, ?)`
+	now := time.Now().UTC()
+	for i := 0; i < upToIdx && i < len(history); i++ {
+		msg := history[i]
+		// We use slightly incremented times to preserve order in case of identical timestamps
+		_, err := tx.Exec(insertQuery, newSessionID, msg.Role, msg.Content, msg.Model, now.Add(time.Duration(i)*time.Millisecond))
+		if err != nil {
+			return err
+		}
+	}
+
+	// 3. Insert the new/edited message
+	_, err = tx.Exec(insertQuery, newSessionID, newMsg.Role, newMsg.Content, newMsg.Model, now.Add(time.Duration(upToIdx)*time.Millisecond))
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
