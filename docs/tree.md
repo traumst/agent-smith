@@ -1,9 +1,9 @@
 # Project Structure
 
 ```text
-agentsmith/
-├── cmd/
-│   └── ping_mcp/             # MCP testing utility
+agent-smith/
+├── mcp/                      # MCP server implementations
+│   └── ping_mcp/             # Reference ping/pong MCP server
 │       └── main.go
 ├── src/
 │   ├── persistence/          # Persistence Layer: SQLite, files, memory, settings, logs
@@ -20,6 +20,7 @@ agentsmith/
 │   │   ├── loop/             # Thinking loop and tool execution
 │   │   ├── tools/            # Built-in tools (FS, Terminal, Browser)
 │   │   ├── ratelimit/        # RPM rate limiter
+│   │   ├── availability/     # Model availability and discovery
 │   │   └── consent/          # Tool execution consent management
 │   ├── api/                  # API Layer: HTTP handling
 │   │   ├── middleware/       # logging, timeout, recovery
@@ -31,12 +32,10 @@ agentsmith/
 │   │       ├── app.css       # Vanilla CSS
 │   │       ├── app.js        # Vanilla JS
 │   │       └── htmx.min.js   # Vendored HTMX
-│   └── test/                 # Test utilities
-├── data/                     # Default persistence directory (git-ignored)
-├── main.go                   # Main entry point
-├── run.sh                    # Helper script to run the app
-├── go.mod                    # Go module definition
-└── go.sum                    # Dependencies checksums
+├── main.go                   # Application entry point
+├── run.sh                    # Local development runner
+├── smoketest.sh              # E2E integration test runner
+└── go.mod                    # Go module definition
 ```
 
 ### Layer Separation

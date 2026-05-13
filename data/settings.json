@@ -6,5 +6,7 @@
     "instructions": "Prioritize answering the user's questions clearly."
   },
   "geminiRPM": 5,
-  "modelRefreshInterval": "1:0:0.000"
+  "modelRefreshInterval": "1:0:0.000",
+  "whitelist": "test.txt\nls\nhttps://example.com\nhttps://en.wikipedia.org/wiki/Main_Page\n~/hellos-fjdshfgjsd.txt\n/Users/alx/code/repos/agent-smith/hellos-fjdshfgjsd.txt\n",
+  "blacklist": ""
 }

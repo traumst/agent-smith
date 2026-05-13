@@ -85,6 +85,12 @@
                 {{if $msg.Model}}
                 <div class="mt-1 border-t border-gray-800 pt-1">🤖 {{$msg.Model}}</div>
                 {{end}}
+                {{if $msg.TokensUsed}}
+                <div class="mt-1 border-t border-gray-800 pt-1 text-gray-500 flex justify-between">
+                  <span>🪙 Tokens:</span>
+                  <span class="font-mono">{{$msg.TokensUsed}}</span>
+                </div>
+                {{end}}
               </div>
             </div>
           </div>

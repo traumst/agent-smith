@@ -17,6 +17,7 @@ func CreateTable(db *sql.DB) error {
 		role TEXT NOT NULL,
 		content TEXT NOT NULL,
 		model TEXT,
+		tokens_used INTEGER,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	CREATE INDEX IF NOT EXISTS idx_chat_history_session ON chat_history(session_id);
@@ -29,14 +30,15 @@ func CreateTable(db *sql.DB) error {
 	// Migration: add model column if it doesn't exist (for existing databases)
 	// We ignore error here because if column exists it will fail
 	_, _ = db.Exec("ALTER TABLE chat_history ADD COLUMN model TEXT")
+	_, _ = db.Exec("ALTER TABLE chat_history ADD COLUMN tokens_used INTEGER")
 
 	return nil
 }
 
 // AddMessage inserts a new message into the history.
 func AddMessage(db *sql.DB, sessionID string, msg protocol.Message) error {
-	query := `INSERT INTO chat_history (session_id, role, content, model, created_at) VALUES (?, ?, ?, ?, ?)`
-	_, err := db.Exec(query, sessionID, msg.Role, msg.Content, msg.Model, time.Now().UTC())
+	query := `INSERT INTO chat_history (session_id, role, content, model, tokens_used, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, sessionID, msg.Role, msg.Content, msg.Model, msg.TokensUsed, time.Now().UTC())
 	if err != nil {
 		return fmt.Errorf("failed to insert message: %w", err)
 	}
@@ -45,7 +47,7 @@ func AddMessage(db *sql.DB, sessionID string, msg protocol.Message) error {
 
 // GetHistory retrieves the chat history for a given session.
 func GetHistory(db *sql.DB, sessionID string) ([]protocol.Message, error) {
-	query := `SELECT role, content, model, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at ASC`
+	query := `SELECT role, content, model, tokens_used, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at ASC`
 	rows, err := db.Query(query, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query history: %w", err)
@@ -57,11 +59,15 @@ func GetHistory(db *sql.DB, sessionID string) ([]protocol.Message, error) {
 		var msg protocol.Message
 		var model sql.NullString
 		var createdAt string
-		if err := rows.Scan(&msg.Role, &msg.Content, &model, &createdAt); err != nil {
+		var tokensUsed sql.NullInt64
+		if err := rows.Scan(&msg.Role, &msg.Content, &model, &tokensUsed, &createdAt); err != nil {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}
 		if model.Valid {
 			msg.Model = model.String
+		}
+		if tokensUsed.Valid {
+			msg.TokensUsed = int(tokensUsed.Int64)
 		}
 		msg.Timestamp = createdAt
 		history = append(history, msg)
@@ -142,7 +148,7 @@ func BranchSession(db *sql.DB, oldSessionID, newSessionID string, upToIdx int, n
 	defer tx.Rollback()
 
 	// 1. Get history for old session
-	query := `SELECT role, content, model, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at ASC`
+	query := `SELECT role, content, model, tokens_used, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at ASC`
 	rows, err := tx.Query(query, oldSessionID)
 	if err != nil {
 		return err
@@ -154,29 +160,33 @@ func BranchSession(db *sql.DB, oldSessionID, newSessionID string, upToIdx int, n
 		var msg protocol.Message
 		var model sql.NullString
 		var createdAt string
-		if err := rows.Scan(&msg.Role, &msg.Content, &model, &createdAt); err != nil {
+		var tokensUsed sql.NullInt64
+		if err := rows.Scan(&msg.Role, &msg.Content, &model, &tokensUsed, &createdAt); err != nil {
 			return err
 		}
 		if model.Valid {
 			msg.Model = model.String
 		}
+		if tokensUsed.Valid {
+			msg.TokensUsed = int(tokensUsed.Int64)
+		}
 		history = append(history, msg)
 	}
 
 	// 2. Insert messages up to upToIdx into new session
-	insertQuery := `INSERT INTO chat_history (session_id, role, content, model, created_at) VALUES (?, ?, ?, ?, ?)`
+	insertQuery := `INSERT INTO chat_history (session_id, role, content, model, tokens_used, created_at) VALUES (?, ?, ?, ?, ?, ?)`
 	now := time.Now().UTC()
 	for i := 0; i < upToIdx && i < len(history); i++ {
 		msg := history[i]
 		// We use slightly incremented times to preserve order in case of identical timestamps
-		_, err := tx.Exec(insertQuery, newSessionID, msg.Role, msg.Content, msg.Model, now.Add(time.Duration(i)*time.Millisecond))
+		_, err := tx.Exec(insertQuery, newSessionID, msg.Role, msg.Content, msg.Model, msg.TokensUsed, now.Add(time.Duration(i)*time.Millisecond))
 		if err != nil {
 			return err
 		}
 	}
 
 	// 3. Insert the new/edited message
-	_, err = tx.Exec(insertQuery, newSessionID, newMsg.Role, newMsg.Content, newMsg.Model, now.Add(time.Duration(upToIdx)*time.Millisecond))
+	_, err = tx.Exec(insertQuery, newSessionID, newMsg.Role, newMsg.Content, newMsg.Model, newMsg.TokensUsed, now.Add(time.Duration(upToIdx)*time.Millisecond))
 	if err != nil {
 		return err
 	}

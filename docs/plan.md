@@ -17,7 +17,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Establish the project structure, configuration, storage, and protocol types.
 
-1. **Initialize Project:** Create `go.mod` (module `agentsmith`) and the initial folder structure (`cmd/`, `src/`).
+1. **Initialize Project:** Create `go.mod` (module `agentsmith`) and the initial folder structure (`mcp/`, `src/`).
 2. **Settings Management:** Implement `src/persistence/settings`. Create configuration structs passed explicitly (no globals). Define the system prompt structure (Competence, Mood, Instructions). Settings are stored as JSON on disk. The agent cannot modify settings — only the user can, including editing files directly outside the agent. Changes must be reflected immediately on next read.
 3. **Storage Setup:** Set up the SQLite database via `mattn/go-sqlite3` with extension loading enabled. Implement schema and access for:
    - `chat_history` — conversation history storage (`src/persistence/history`)

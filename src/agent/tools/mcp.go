@@ -29,7 +29,7 @@ func RegisterMCPTools(d Dispatcher) {
 		},
 	}, func(ctx context.Context, args any) (string, error) {
 		// Launch the ping_mcp server
-		cmd := exec.CommandContext(ctx, "go", "run", "cmd/ping_mcp/main.go")
+		cmd := exec.CommandContext(ctx, "go", "run", "mcp/ping_mcp/main.go")
 
 		stdin, err := cmd.StdinPipe()
 		if err != nil {

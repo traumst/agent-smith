@@ -44,7 +44,11 @@ func (h *ChatHandler) Post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.UserPrompt != "" {
-		userMsg := protocol.Message{Role: "user", Content: req.UserPrompt}
+		userMsg := protocol.Message{
+			Role:       "user",
+			Content:    req.UserPrompt,
+			TokensUsed: protocol.EstimateTokens(req.UserPrompt),
+		}
 		if err := history.AddMessage(h.DB, req.SessionID, userMsg); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -77,6 +81,7 @@ func (h *ChatHandler) Post(w http.ResponseWriter, r *http.Request) {
 
 	var fullContent strings.Builder
 	var lastModel string
+	var lastTokens int
 
 	for {
 		select {
@@ -112,6 +117,7 @@ func (h *ChatHandler) Post(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if resp.Done {
+				lastTokens = resp.TokensUsed
 				writeSSE(w, flusher, "done", fmt.Sprintf("Tokens used: %d", resp.TokensUsed))
 				goto save
 			}
@@ -121,10 +127,11 @@ func (h *ChatHandler) Post(w http.ResponseWriter, r *http.Request) {
 save:
 	if fullContent.Len() > 0 {
 		assistantMsg := protocol.Message{
-			Role:      "assistant",
-			Content:   fullContent.String(),
-			Model:     lastModel,
-			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Role:       "assistant",
+			Content:    fullContent.String(),
+			Model:      lastModel,
+			TokensUsed: lastTokens,
+			Timestamp:  time.Now().UTC().Format(time.RFC3339),
 		}
 		_ = history.AddMessage(h.DB, req.SessionID, assistantMsg)
 	}

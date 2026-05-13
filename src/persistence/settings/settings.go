@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"agentsmith/src/agent/consent"
 	"agentsmith/src/agent/protocol"
 )
 
@@ -15,6 +16,8 @@ type Settings struct {
 	SystemPrompt         protocol.SystemPrompt `json:"systemPrompt"`
 	GeminiRPM            int                   `json:"geminiRPM"`
 	ModelRefreshInterval string                `json:"modelRefreshInterval"`
+	Whitelist            string                `json:"whitelist"`
+	Blacklist            string                `json:"blacklist"`
 }
 
 // LoadSettings reads the settings from a JSON file on disk.
@@ -41,6 +44,13 @@ func LoadSettings(path string) (*Settings, error) {
 		s.GeminiRPM = DefaultSettings().GeminiRPM
 	}
 
+	// Load consent lists
+	if s.Whitelist, err = consent.ReadList(".whitelist"); err != nil {
+		return nil, err
+	}
+	if s.Blacklist, err = consent.ReadList(".blacklist"); err != nil {
+		return nil, err
+	}
 	return &s, nil
 }
 
@@ -55,6 +65,13 @@ func SaveSettings(path string, s *Settings) error {
 		return fmt.Errorf("failed to write settings file: %w", err)
 	}
 
+	// Save consent lists
+	if err := consent.WriteList(".whitelist", s.Whitelist); err != nil {
+		return err
+	}
+	if err := consent.WriteList(".blacklist", s.Blacklist); err != nil {
+		return err
+	}
 	return nil
 }
 

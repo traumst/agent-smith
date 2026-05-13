@@ -22,6 +22,7 @@ type Message struct {
 	ToolResults []ToolResult `json:"toolResults,omitempty"`
 	Model       string       `json:"model,omitempty"`
 	Timestamp   string       `json:"timestamp,omitempty"`
+	TokensUsed  int          `json:"tokensUsed,omitempty"`
 }
 
 // ToolDef represents the JSON schema definition for a tool available to the agent.
@@ -69,4 +70,13 @@ type Response struct {
 	Model       string     `json:"model,omitempty"`
 	Timestamp   string     `json:"timestamp,omitempty"`
 	Error       error      `json:"error,omitempty"`
+}
+
+// EstimateTokens provides a rough character-based estimation of token count.
+func EstimateTokens(s string) int {
+	if s == "" {
+		return 0
+	}
+	// Rough estimate: 4 characters per token
+	return (len(s) + 3) / 4
 }

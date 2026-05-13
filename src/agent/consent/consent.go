@@ -2,6 +2,8 @@ package consent
 
 import (
 	"bufio"
+	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -95,6 +97,23 @@ func appendToList(filename, pattern string) error {
 	return err
 }
 
+// ReadList returns the entire content of a list file
+func ReadList(filename string) (string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return string(data), nil
+}
+
+// WriteList overwrites the entire content of a list file
+func WriteList(filename, content string) error {
+	return os.WriteFile(filename, []byte(content), 0644)
+}
+
 // Require checks if a subject is whitelisted/blacklisted, and prompts if neither.
 // Returns "run" or "block".
 func Require(toolName string, subject string, args any) (string, error) {
@@ -154,4 +173,42 @@ func stdinPrompt(toolName, subject string, args any) (string, error) {
 
 	input = strings.ToLower(strings.TrimSpace(input))
 	return HandleConsentAction(input, subject), nil
+}
+
+// Chan holds the latest consent request for SSE pickup.
+var Chan = make(chan string, 1)
+
+// Broadcast sends a consent request to the Chan, replacing any previous pending request.
+func Broadcast(data string) {
+	select {
+	case Chan <- data:
+	default:
+		<-Chan
+		Chan <- data
+	}
+}
+
+// Setup configures the global PromptFunc to use a web-based flow.
+func Setup() *PendingConsent {
+	pending := NewPendingConsent()
+	PromptFunc = func(toolName, subject string, args any) (string, error) {
+		id := randomID()
+		consentReq := map[string]any{
+			"id":      id,
+			"tool":    toolName,
+			"subject": subject,
+			"args":    args,
+		}
+		data, _ := json.Marshal(consentReq)
+		Broadcast(string(data))
+		action := pending.Wait(id)
+		return HandleConsentAction(action, subject), nil
+	}
+	return pending
+}
+
+func randomID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
 }
