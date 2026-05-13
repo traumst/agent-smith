@@ -157,7 +157,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 			if resp == nil {
 				continue
 			}
-			pr := &protocol.Response{}
+			pr := &protocol.Response{Model: a.registry.GetActive()}
 
 			// Map Usage Metadata
 			if resp.UsageMetadata != nil {
@@ -183,7 +183,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 		}
 
 		// Send final done message
-		streamChan <- &protocol.Response{Done: true, TokensUsed: totalTokens}
+		streamChan <- &protocol.Response{Done: true, TokensUsed: totalTokens, Model: a.registry.GetActive()}
 
 	} else {
 		resp, err := a.client.Models.GenerateContent(ctx, a.registry.GetActive(), contents, config)
@@ -193,7 +193,7 @@ func (a *Adapter) Chat(ctx context.Context, req *protocol.Request, streamChan ch
 			return err
 		}
 
-		pr := &protocol.Response{Done: true}
+		pr := &protocol.Response{Done: true, Model: a.registry.GetActive()}
 		if resp.UsageMetadata != nil {
 			pr.TokensUsed = int(resp.UsageMetadata.TotalTokenCount)
 		}

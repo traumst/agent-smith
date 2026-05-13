@@ -38,34 +38,62 @@ function scrollToBottom() {
   if (chat) chat.scrollTop = chat.scrollHeight;
 }
 
-function appendMessage(role, content) {
+function appendMessage(role, content, model, timestamp) {
   const chat = document.getElementById("chat-messages");
   if (!chat) return null;
 
+  const timeStr = timestamp || new Date().toISOString();
+  const displayTime = new Date(timeStr).toLocaleTimeString();
+
   const wrapper = document.createElement("div");
   wrapper.className = role === "user"
-    ? "flex justify-end"
-    : "flex justify-start";
+    ? "flex flex-col items-end group"
+    : "flex flex-col items-start group";
+
+  const bubbleContainer = document.createElement("div");
+  bubbleContainer.className = "relative max-w-[75%]";
 
   const bubble = document.createElement("div");
   bubble.className = role === "user"
-    ? "chat-content max-w-[75%] px-4 py-3 rounded-2xl bg-blue-600 text-white rounded-br-md"
-    : "chat-content max-w-[75%] px-4 py-3 rounded-2xl bg-gray-700 text-gray-100 rounded-bl-md";
+    ? "chat-content px-4 py-3 rounded-2xl bg-blue-600 text-white rounded-br-md whitespace-pre-wrap"
+    : "chat-content px-4 py-3 rounded-2xl bg-gray-700 text-gray-100 rounded-bl-md whitespace-pre-wrap";
 
   bubble.innerHTML = escapeAndFormat(content);
-  wrapper.appendChild(bubble);
+  bubbleContainer.appendChild(bubble);
+
+  // Info Icon
+  const infoIcon = document.createElement("div");
+  infoIcon.className = "absolute -bottom-2 -right-2 w-5 h-5 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-400 cursor-help transition-all shadow-lg z-10 hover:border-blue-500 hover:text-blue-400 group/info";
+  infoIcon.innerHTML = "i";
+  
+  // Tooltip
+  const tooltip = document.createElement("div");
+  tooltip.className = "absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-[10px] p-2 rounded-lg border border-gray-700 shadow-2xl pointer-events-none opacity-0 group-hover/info:opacity-100 transition-opacity z-20";
+  let tooltipHtml = `<div>🕒 ${displayTime}</div>`;
+  if (model) tooltipHtml += `<div class="mt-1 border-t border-gray-800 pt-1">🤖 ${model}</div>`;
+  tooltip.innerHTML = tooltipHtml;
+  
+  infoIcon.appendChild(tooltip);
+  bubbleContainer.appendChild(infoIcon);
+  wrapper.appendChild(bubbleContainer);
+
+  if (role === "assistant" && model) {
+    const badge = document.createElement("div");
+    badge.className = "text-[10px] text-gray-500 mt-1 ml-2 flex items-center gap-1 opacity-70";
+    badge.innerHTML = `<span>🤖</span> ${model}`;
+    wrapper.appendChild(badge);
+  }
+
   chat.appendChild(wrapper);
   scrollToBottom();
   return bubble;
 }
 
 function escapeAndFormat(text) {
-  const escaped = text
+  return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  // Basic: convert newlines to <br>
-  return escaped.replace(/\n/g, "<br>");
 }
 
 // ---- SSE Chat Submission ----
@@ -76,9 +104,10 @@ function submitChat() {
   if (!prompt) return;
 
   input.value = "";
-  appendMessage("user", prompt);
+  const now = new Date().toISOString();
+  appendMessage("user", prompt, null, now);
 
-  const assistantBubble = appendMessage("assistant", "");
+  const assistantBubble = appendMessage("assistant", "", null, now);
   assistantBubble.classList.add("streaming-cursor");
 
   const body = JSON.stringify({
@@ -138,20 +167,30 @@ function submitChat() {
 function handleSSE(eventType, data, bubble) {
   switch (eventType) {
     case "message":
-      let htmlToAppend = escapeAndFormat(data);
+      let content = data;
+      let model = "";
+      let timestamp = "";
+      try {
+        const parsed = JSON.parse(data);
+        content = parsed.content;
+        model = parsed.model;
+        timestamp = parsed.timestamp;
+      } catch (e) {
+        // Fallback for non-JSON
+      }
 
-      const rateLimitMatch = data.match(/\[Rate limited\. Retrying in (\d+)s\.\.\.\]/);
+      let htmlToAppend = escapeAndFormat(content);
+
+      const rateLimitMatch = content.match(/\[Rate limited\. Retrying in (\d+)s\.\.\.\]/);
       if (rateLimitMatch) {
         const secs = parseInt(rateLimitMatch[1], 10);
         const spanId = "retry-" + Date.now();
         
-        // Replace the escaped string with actual HTML containing our span
         const escapedOriginal = escapeAndFormat(rateLimitMatch[0]);
         const replacementHtml = `[Rate limited. Retrying in <span id="${spanId}" class="text-amber-500 font-bold">${secs}</span>s...]`;
         
         htmlToAppend = htmlToAppend.replace(escapedOriginal, replacementHtml);
         
-        // Start countdown
         let remaining = secs;
         const interval = setInterval(() => {
           remaining--;
@@ -166,6 +205,25 @@ function handleSSE(eventType, data, bubble) {
       }
 
       bubble.innerHTML += htmlToAppend;
+      
+      // If model is present and not already shown, we could add it.
+      // But for streaming chunks, we only want to add it once.
+      // Let's check if the badge already exists in the wrapper.
+      if (model) {
+        const wrapper = bubble.closest('.group');
+        const tooltip = wrapper ? wrapper.querySelector('.group-hover\\/info\\:opacity-100') : null;
+        if (tooltip && !tooltip.innerHTML.includes('🤖')) {
+          tooltip.innerHTML += `<div class="mt-1 border-t border-gray-800 pt-1">🤖 ${model}</div>`;
+        }
+        
+        if (wrapper && !wrapper.querySelector('.model-badge')) {
+          const badge = document.createElement("div");
+          badge.className = "model-badge text-[10px] text-gray-500 mt-1 ml-2 flex items-center gap-1 opacity-70";
+          badge.innerHTML = `<span>🤖</span> ${model}`;
+          wrapper.appendChild(badge);
+        }
+      }
+      
       scrollToBottom();
       break;
 
@@ -238,6 +296,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+  if (SESSION_ID) {
+    document.getElementById('delete-chat-container')?.classList.remove('hidden');
+  }
 });
 
 // ---- Context Menu ----
@@ -294,4 +355,15 @@ async function updateModel() {
   } catch (err) {
     showToast("Failed to update model: " + err.message, "error");
   }
+}
+
+function confirmDeleteChat() {
+  fetch(`/ui/delete?session_id=${SESSION_ID}`, { method: 'POST' })
+    .then(res => {
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        showToast("Failed to delete chat", "error");
+      }
+    });
 }

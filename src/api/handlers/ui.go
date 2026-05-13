@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"smithai/src/agent/adapter/gemini"
+	"smithai/src/agent/protocol"
 	"smithai/src/persistence/history"
 	"smithai/src/persistence/settings"
 )
@@ -22,11 +23,18 @@ type UIHandler struct {
 
 // Index renders the chat page.
 func (h *UIHandler) Index(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.URL.Query().Get("session_id")
+	var hist []protocol.Message
+	if sessionID != "" {
+		hist, _ = history.GetHistory(h.DB, sessionID)
+	}
+
 	cfg, _ := settings.LoadSettings(h.SettingsPath)
 	data := map[string]interface{}{
 		"ActiveModel": h.Registry.GetActive(),
 		"Models":      h.Registry.GetModels(),
 		"Settings":    cfg,
+		"History":     hist,
 	}
 	if err := h.Templates["chat.html"].Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -69,6 +77,24 @@ func (h *UIHandler) HistoryList(w http.ResponseWriter, r *http.Request) {
 	if err := h.Templates["history_list.html"].Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// DeleteChat handles session deletion.
+func (h *UIHandler) DeleteChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	sessionID := r.URL.Query().Get("session_id")
+	if sessionID == "" {
+		http.Error(w, "Missing session_id", http.StatusBadRequest)
+		return
+	}
+	if err := history.DeleteSession(h.DB, sessionID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 // StaticHandler returns an http.Handler that serves embedded static files.

@@ -20,6 +20,8 @@ type Message struct {
 	Content     string       `json:"content"`
 	ToolCalls   []ToolCall   `json:"toolCalls,omitempty"`
 	ToolResults []ToolResult `json:"toolResults,omitempty"`
+	Model       string       `json:"model,omitempty"`
+	Timestamp   string       `json:"timestamp,omitempty"`
 }
 
 // ToolDef represents the JSON schema definition for a tool available to the agent.
@@ -64,5 +66,7 @@ type Response struct {
 	FileDelta   *FileDelta `json:"fileDelta,omitempty"`
 	LoadContext []string   `json:"loadContext,omitempty"`
 	TokensUsed  int        `json:"tokensUsed"`
+	Model       string     `json:"model,omitempty"`
+	Timestamp   string     `json:"timestamp,omitempty"`
 	Error       error      `json:"error,omitempty"`
 }

@@ -33,6 +33,18 @@
           <a href="/ui/settings" class="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
             <span>⚙️</span> Settings
           </a>
+          <div id="delete-chat-container" class="relative hidden">
+            <button id="delete-chat-btn" onclick="this.nextElementSibling.classList.remove('hidden'); this.classList.add('hidden')" class="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
+              <span>🗑️</span> Delete Chat
+            </button>
+            <div class="hidden px-3 py-2 bg-gray-900 border border-red-900/50 rounded-lg flex items-center justify-between gap-2 shadow-xl animate-in fade-in slide-in-from-right-2 duration-200">
+              <span class="text-[10px] font-bold text-red-500 uppercase">Delete?</span>
+              <div class="flex gap-1">
+                <button onclick="confirmDeleteChat()" class="text-[10px] bg-red-600 text-white px-2 py-1 rounded">Yes</button>
+                <button onclick="this.parentElement.parentElement.classList.add('hidden'); this.parentElement.parentElement.previousElementSibling.classList.remove('hidden')" class="text-[10px] bg-gray-800 text-gray-400 px-2 py-1 rounded">No</button>
+              </div>
+            </div>
+          </div>
           <a href="/" class="w-full text-left px-3 py-2 text-sm text-emerald-400 hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
             <span>+</span> New Chat
           </a>
@@ -49,10 +61,35 @@
 
   <!-- Chat messages -->
   <div id="chat-messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-    <!-- Messages get appended here by JS -->
-    <div class="flex justify-center">
-      <p class="text-gray-600 text-sm">Send a message to start chatting.</p>
-    </div>
+    {{range .History}}
+      <div class="flex flex-col {{if eq .Role "user"}}items-end{{else}}items-start{{end}} group">
+        <div class="relative max-w-[75%]">
+          <div class="chat-content px-4 py-3 rounded-2xl whitespace-pre-wrap {{if eq .Role "user"}}bg-blue-600 text-white rounded-br-md{{else}}bg-gray-700 text-gray-100 rounded-bl-md{{end}}">{{.Content}}</div>
+          
+          <!-- Info Icon -->
+          <div class="absolute -bottom-2 -right-2 w-5 h-5 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-400 cursor-help transition-all shadow-lg z-10 hover:border-blue-500 hover:text-blue-400 group/info">
+            i
+            <!-- Tooltip -->
+            <div class="absolute bottom-full right-0 mb-2 w-48 bg-gray-900 text-white text-[10px] p-2 rounded-lg border border-gray-700 shadow-2xl pointer-events-none opacity-0 group-hover/info:opacity-100 transition-opacity z-20">
+              <div>🕒 {{.Timestamp}}</div>
+              {{if .Model}}
+              <div class="mt-1 border-t border-gray-800 pt-1">🤖 {{.Model}}</div>
+              {{end}}
+            </div>
+          </div>
+        </div>
+        
+        {{if .Model}}
+          <div class="text-[10px] text-gray-500 mt-1 ml-2 flex items-center gap-1 opacity-70">
+            <span>🤖</span> {{.Model}}
+          </div>
+        {{end}}
+      </div>
+    {{else}}
+      <div class="flex justify-center">
+        <p class="text-gray-600 text-sm">Send a message to start chatting.</p>
+      </div>
+    {{end}}
   </div>
 
   <!-- Input bar -->

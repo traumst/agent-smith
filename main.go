@@ -169,6 +169,7 @@ func main() {
 	mux.Handle("GET /static/", handlers.StaticHandler(ui.StaticFS))
 	mux.HandleFunc("GET /ui/history", uiHandler.HistoryList)
 	mux.HandleFunc("GET /ui/settings", uiHandler.Settings)
+	mux.HandleFunc("POST /ui/delete", uiHandler.DeleteChat)
 
 	// API routes
 	settingsHandler := &handlers.SettingsHandler{Path: settingsPath, Registry: registry}

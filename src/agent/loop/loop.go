@@ -110,6 +110,9 @@ func (a *Agent) callLLM(ctx context.Context, req *protocol.Request, outChan chan
 
 			fmt.Printf("[LLM response chunk] %s\n", resp.Content)
 			fullResponse.Content += resp.Content
+			if resp.Model != "" {
+				fullResponse.Model = resp.Model
+			}
 			if len(resp.ToolCalls) > 0 {
 				fmt.Printf("[LLM response toolcalls] %s\n", resp.ToolCalls)
 				fullResponse.ToolCalls = append(fullResponse.ToolCalls, resp.ToolCalls...)
