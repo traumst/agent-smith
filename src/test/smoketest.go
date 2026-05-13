@@ -9,17 +9,17 @@ import (
 
 	"google.golang.org/genai"
 
-	"smithai/src/agent/adapter/gemini"
-	"smithai/src/agent/loop"
-	"smithai/src/agent/protocol"
-	"smithai/src/agent/tools"
-	"smithai/src/persistence/db"
-	"smithai/src/persistence/history"
-	"smithai/src/persistence/logs"
-	"smithai/src/persistence/memory"
-	"smithai/src/persistence/refs"
-	"smithai/src/persistence/settings"
-	"smithai/src/persistence/vector"
+	"agentsmith/src/agent/adapter/gemini"
+	"agentsmith/src/agent/loop"
+	"agentsmith/src/agent/protocol"
+	"agentsmith/src/agent/tools"
+	"agentsmith/src/persistence/db"
+	"agentsmith/src/persistence/history"
+	"agentsmith/src/persistence/logs"
+	"agentsmith/src/persistence/memory"
+	"agentsmith/src/persistence/refs"
+	"agentsmith/src/persistence/settings"
+	"agentsmith/src/persistence/vector"
 )
 
 // RunSmokeTest executes the Phase 2 test flow.
@@ -137,7 +137,7 @@ func RunSmokeTest(cfg *settings.Settings) {
 		return
 	}
 
-	if err := memStore.SaveMemory("test_memory.txt", "Smith is an AI agent built in Go."); err != nil {
+	if err := memStore.SaveMemory("test_memory.txt", "Agent Smith is an AI agent built in Go."); err != nil {
 		fmt.Printf("Failed to save memory: %v\n", err)
 		return
 	}

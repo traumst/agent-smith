@@ -8,7 +8,7 @@ import (
 	"io"
 	"os/exec"
 
-	"smithai/src/agent/protocol"
+	"agentsmith/src/agent/protocol"
 )
 
 // Request represents a JSON-RPC request
@@ -24,13 +24,13 @@ func RegisterMCPTools(d Dispatcher) {
 		Name:        "mcp_ping",
 		Description: "Pings the local Ping MCP server to verify that MCP integration and standard IO communication is working properly.",
 		Parameters: map[string]any{
-			"type": "object",
+			"type":       "object",
 			"properties": map[string]any{},
 		},
 	}, func(ctx context.Context, args any) (string, error) {
 		// Launch the ping_mcp server
 		cmd := exec.CommandContext(ctx, "go", "run", "cmd/ping_mcp/main.go")
-		
+
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			return "", fmt.Errorf("failed to get stdin pipe: %v", err)
@@ -44,7 +44,7 @@ func RegisterMCPTools(d Dispatcher) {
 		if err := cmd.Start(); err != nil {
 			return "", fmt.Errorf("failed to start ping_mcp server: %v", err)
 		}
-		
+
 		defer func() {
 			stdin.Close()
 			cmd.Process.Kill()
@@ -58,7 +58,7 @@ func RegisterMCPTools(d Dispatcher) {
 			Method:  "ping",
 		}
 		reqBytes, _ := json.Marshal(req)
-		
+
 		// Send request
 		_, err = io.WriteString(stdin, string(reqBytes)+"\n")
 		if err != nil {

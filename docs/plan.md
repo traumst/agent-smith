@@ -1,6 +1,6 @@
 # Implementation Plan
 
-We will build SmithAI iteratively, ensuring each step yields a clean, functional, and testable slice of the application. The primary focus is simplicity and avoiding magic.
+We will build Agent Smith iteratively, ensuring each step yields a clean, functional, and testable slice of the application. The primary focus is simplicity and avoiding magic.
 
 ## Approved External Dependencies
 
@@ -17,7 +17,7 @@ All other functionality must use the Go standard library.
 
 **Goal:** Establish the project structure, configuration, storage, and protocol types.
 
-1. **Initialize Project:** Create `go.mod` (module `smithai`) and the initial folder structure (`cmd/`, `src/`).
+1. **Initialize Project:** Create `go.mod` (module `agentsmith`) and the initial folder structure (`cmd/`, `src/`).
 2. **Settings Management:** Implement `src/persistence/settings`. Create configuration structs passed explicitly (no globals). Define the system prompt structure (Competence, Mood, Instructions). Settings are stored as JSON on disk. The agent cannot modify settings — only the user can, including editing files directly outside the agent. Changes must be reflected immediately on next read.
 3. **Storage Setup:** Set up the SQLite database via `mattn/go-sqlite3` with extension loading enabled. Implement schema and access for:
    - `chat_history` — conversation history storage (`src/persistence/history`)
@@ -77,7 +77,7 @@ All other functionality must use the Go standard library.
 
 1. **Security/Consent Gateway:** Implement the user-dialog pause logic for sensitive tools. In this phase, consent prompts are text-based (stdin/stdout). The `run/auto/block` workflow is functional but headless.
 2. **File System Tool:** Safe read/write access to the local disk.
-3. **Terminal Tool:** Safely execute terminal commands using `os/exec`. Implement the `.smithai-whitelist` parser (with wildcard support) and a shell command parser to identify and block chained commands from unintentionally bypassing the whitelist.
+3. **Terminal Tool:** Safely execute terminal commands using `os/exec`. Implement the `.agentsmith-whitelist` parser (with wildcard support) and a shell command parser to identify and block chained commands from unintentionally bypassing the whitelist.
 4. **Web Search / Browser Tool:** Implement browser automation using `chromedp` to allow the agent to interact with full web pages after explicit user consent. Blocked by default.
 5. **MCP Dummy Client:** Implement a basic client to test and verify standard MCP integration capabilities.
 
@@ -108,5 +108,5 @@ All other functionality must use the Go standard library.
 ## Testing Strategy
 
 - **Unit Tests:** Write unit tests for all public functions across all packages. Run via `go test ./...`.
-- **Simulation Tests:** Use `chromedp` to write end-to-end browser tests that interact with the running SmithAI web UI — submitting prompts, verifying streamed responses, testing consent dialogs, etc.
+- **Simulation Tests:** Use `chromedp` to write end-to-end browser tests that interact with the running Agent Smith web UI — submitting prompts, verifying streamed responses, testing consent dialogs, etc.
 - **Smoke Test:** The `main.go` harness from Phase 2 serves as a quick integration check throughout development.

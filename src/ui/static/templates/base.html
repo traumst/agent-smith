@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SmithAI — AI coding assistant">
-  <title>SmithAI</title>
+  <meta name="description" content="Agent Smith — AI coding assistant">
+  <title>Agent Smith</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicons/favicon-16x16.png">
+  <link rel="shortcut icon" href="/static/favicons/favicon.ico">
   <script src="/static/tailwind.js"></script>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js"></script>
@@ -23,7 +27,7 @@
   <div id="consent-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center modal-backdrop bg-black/50">
     <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4">
       <h3 class="text-lg font-semibold text-white mb-1">Permission Required</h3>
-      <p class="text-sm text-gray-400 mb-4">The agent wants to use a tool that requires your approval.</p>
+      <p class="text-sm text-gray-400 mb-4">Agent Smith wants to use a tool that requires your approval.</p>
 
       <div class="space-y-3 mb-6">
         <div>

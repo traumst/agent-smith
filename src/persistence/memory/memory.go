@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"smithai/src/persistence/refs"
-	"smithai/src/persistence/vector"
+	"agentsmith/src/persistence/refs"
+	"agentsmith/src/persistence/vector"
 )
 
 // Store represents the long-term memory store.

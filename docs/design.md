@@ -1,32 +1,32 @@
-# SmithAI
+# Agent Smith
 
 Custom coding agent, built to be highly configurable and reliable.
 
 ## Details
 
-SmithAI is built to be a versatile base for an agententic usage.
+Agent Smith is built to be a versatile base for an agentic usage.
 Provides an API to be used via TUI or as IDE plugin.
-This agent is being built to be safety-first.
-It respects users privacy and does not send any data without explicit consent.
-Any time a new resource is about to receive your info, the agent will pause and raise a user dialog to confirm the action.
-The agent provides an easy way to define custom tools in JSON format.
-The agent should have a configurable system prompt composed from 3 parts:
+Agent Smith is being built to be safety-first.
+Agent Smith respects users privacy and does not send any data without explicit consent.
+Any time a new resource is about to receive your info, Agent Smith will pause and raise a user dialog to confirm the action.
+Agent Smith provides an easy way to define custom tools in JSON format.
+Agent Smith has a configurable system prompt composed from 3 parts:
 
 1. Competance - what the agent knows and can do, like a resume of the agent, a list of tools, project structure, etc.
 2. Mood - flavor or accent for the agent, that affects thinking but not code quality. Like "Yarrr, you are a pirate, matey!" vs "You grok, why say many word when few do trick?"
 3. Instructions - Specific task at hand. Derived from vanilla user prompt.
 
-Agent should define a clear protocol to interact with the underlying models. There should be a request and response formats defined as types. Request must contain: system prompt(competance, mood, instructions), user prompt, history of previous requests and responses, tools definitions. Response must contain: whether the task is completed, raw and column number where changes start and end, delta of changes, request additional data to load into context, etc. Think about which other fields are commonly used and we should include to keep our protocol as simple as possible. For starters we are only interested in chatting about and editing code.
+Agent Smith defines a clear protocol to interact with the underlying models. There should be a request and response formats defined as types. Request must contain: system prompt(competance, mood, instructions), user prompt, history of previous requests and responses, tools definitions. Response must contain: whether the task is completed, raw and column number where changes start and end, delta of changes, request additional data to load into context, etc. Think about which other fields are commonly used and we should include to keep our protocol as simple as possible. For starters we are only interested in chatting about and editing code.
 
-Agent should be aware of the context window limitations and estimate token consumption for prompts (not including llm responses). It should account for the system prompt overhead.
+Agent Smith is aware of context window limitations and estimates token consumption for prompts (not including llm responses). Agent Smith accounts for system prompt overhead.
 
-Agent should be able to use certain tools out of the box.
+Agent Smith is able to use certain tools out of the box.
 This includes:
 
 - File system access - reading and writing files
 - Web search - ability to search the web
 - Terminal - ability to run commands in the terminal
-- MCP dummy client - to verify MCP is working and is integrated properly
+- MCP client - to verify MCP is working and is integrated properly
 
 ## Requirements
 
@@ -34,8 +34,8 @@ This includes:
 2. It should be versatile. I should be able to use it as a library to integrate the same agent into an IDE plugin or build a TUI for it late.
 3. It should be highly configurable. All adjustable settings should be passed explicitly via function arguments. Env variables should only provide defaults.
 4. It should be able to update its own settings, prompts, etc.. Agent self-improvement should be persisted separately and able to be reverted.
-5. It should be able to maintain long-term memory across sessions - if user so chooses. Size and location of this memory on disk should be user configurable. Size should be capped at configurable limit.
-6. It should be responsive to the user. Stream LLM thinking/reasoning and responses as they arrive. Attempt to recover from transient errors. Use timeouts to signal issues to the user. Fail fast and in controlled manner.
+5. Agent Smith is able to maintain long-term memory across sessions - if user so chooses. Size and location of this memory on disk should be user configurable. Size should be capped at configurable limit.
+6. Agent Smith is responsive to the user. Stream LLM thinking/reasoning and responses as they arrive. Attempt to recover from transient errors. Use timeouts to signal issues to the user. Fail fast and in controlled manner.
 7. Code should be simple, clean, well-structured, and easy to explain. Prefer plain code over magic. Never write comments except when absolutely necessary to explain a design choice or a complex algorithm.
 8. Avoid the use of any external dependencies. Default to the standard library. Do not use any external frameworks or libraries unless explicitly allowed.
 

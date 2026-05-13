@@ -1,8 +1,8 @@
 package adapter
 
 import (
+	"agentsmith/src/agent/protocol"
 	"context"
-	"smithai/src/agent/protocol"
 )
 
 // Adapter defines the interface for communicating with an LLM provider.

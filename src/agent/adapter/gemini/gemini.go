@@ -8,9 +8,9 @@ import (
 
 	"google.golang.org/genai"
 
-	"smithai/src/agent/availability"
-	"smithai/src/agent/protocol"
-	"smithai/src/agent/ratelimit"
+	"agentsmith/src/agent/availability"
+	"agentsmith/src/agent/protocol"
+	"agentsmith/src/agent/ratelimit"
 )
 
 // Adapter implements the adapter.Adapter interface for the Gemini API.

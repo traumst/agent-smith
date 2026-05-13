@@ -13,28 +13,28 @@ import (
 
 	"google.golang.org/genai"
 
-	"smithai/src/agent/adapter/gemini"
-	"smithai/src/agent/consent"
-	"smithai/src/agent/loop"
-	"smithai/src/agent/tools"
-	"smithai/src/api/handlers"
-	"smithai/src/api/middleware"
-	"smithai/src/persistence/db"
-	"smithai/src/persistence/history"
-	"smithai/src/persistence/logs"
-	"smithai/src/persistence/memory"
-	"smithai/src/persistence/refs"
-	"smithai/src/persistence/settings"
-	"smithai/src/persistence/vector"
-	"smithai/src/test"
-	"smithai/src/ui"
+	"agentsmith/src/agent/adapter/gemini"
+	"agentsmith/src/agent/consent"
+	"agentsmith/src/agent/loop"
+	"agentsmith/src/agent/tools"
+	"agentsmith/src/api/handlers"
+	"agentsmith/src/api/middleware"
+	"agentsmith/src/persistence/db"
+	"agentsmith/src/persistence/history"
+	"agentsmith/src/persistence/logs"
+	"agentsmith/src/persistence/memory"
+	"agentsmith/src/persistence/refs"
+	"agentsmith/src/persistence/settings"
+	"agentsmith/src/persistence/vector"
+	"agentsmith/src/test"
+	"agentsmith/src/ui"
 )
 
 func main() {
 	testFlag := flag.Bool("test", false, "Run the CLI smoke test instead of starting the HTTP server")
 	flag.Parse()
 
-	fmt.Println("SmithAI starting up...")
+	fmt.Println("Agent Smith starting up...")
 
 	settingsPath := "data/settings.json"
 
@@ -195,7 +195,7 @@ func main() {
 	handler = middleware.Logging(handler)
 
 	port := ":8080"
-	fmt.Printf("SmithAI ready at http://localhost%s\n", port)
+	fmt.Printf("Agent Smith ready at http://localhost%s\n", port)
 	if err := http.ListenAndServe(port, handler); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

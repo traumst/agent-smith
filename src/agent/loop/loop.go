@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"smithai/src/agent/adapter"
-	"smithai/src/agent/protocol"
-	"smithai/src/agent/tools"
+	"agentsmith/src/agent/adapter"
+	"agentsmith/src/agent/protocol"
+	"agentsmith/src/agent/tools"
 )
 
 // Agent represents the core reasoning loop.

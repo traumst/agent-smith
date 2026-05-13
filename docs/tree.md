@@ -1,7 +1,7 @@
 # Project Structure
 
 ```text
-smithai/
+agentsmith/
 ├── cmd/
 │   └── ping_mcp/             # MCP testing utility
 │       └── main.go

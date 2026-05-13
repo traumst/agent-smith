@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"smithai/src/agent/loop"
-	"smithai/src/agent/protocol"
-	"smithai/src/persistence/history"
+	"agentsmith/src/agent/loop"
+	"agentsmith/src/agent/protocol"
+	"agentsmith/src/persistence/history"
 )
 
 // ChatHandler manages the agent interaction endpoint via SSE.

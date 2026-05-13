@@ -10,7 +10,7 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 
 1. **`mattn/go-sqlite3`** (CGO) — Go has no built-in SQLite support. CGO is acceptable for our use case: we ship a compiled binary, serve a web UI, and have no WASM targets. Provides extension loading required for `sqlite-vec`.
 2. **`github.com/asg017/sqlite-vec-go-bindings/cgo`** — Lightweight SQLite extension for vector similarity search. Bundled via CGO bindings. Powers keyword-based lookups into long-term memory files without introducing a separate vector database.
-3. **`chromedp`** (`github.com/chromedp/chromedp`) — Pure Go Chrome DevTools Protocol client. Used for two purposes: (a) the agent's web browser tool, allowing interaction with full web pages, and (b) simulation/end-to-end tests against the SmithAI web UI. Communicates directly with a local Chrome/Chromium installation — no external driver binaries.
+3. **`chromedp`** (`github.com/chromedp/chromedp`) — Pure Go Chrome DevTools Protocol client. Used for two purposes: (a) Agent Smith's web browser tool, allowing interaction with full web pages, and (b) simulation/end-to-end tests against the Agent Smith web UI. Communicates directly with a local Chrome/Chromium installation — no external driver binaries.
 4. **`google.golang.org/genai`** — Official Gemini Go SDK for native integration with the Gemini API.
 
 ## UI Layer
@@ -36,18 +36,18 @@ The project follows a strict "standard library first" policy (Requirement #8). T
 ## Tools Layer
 
 - **File System**: Go `os` and `path/filepath` packages.
-- **Terminal**: Go `os/exec` package to safely run commands. Execution is gated by a `.smithai-whitelist` plaintext file (supporting gitignore-like wildcards) at the project root. The user is prompted to `run/auto/block` commands. "Auto" adds the command to the whitelist. The agent parses and identifies chained commands (e.g., `&&`, `|`, `;`) to prevent unintentional auto-execution of rogue scripts.
-- **Web Search / Browser**: Uses `chromedp` (approved exception). Blocked by default and prompted for user permission. Once allowed, the agent spawns a headless browser to interact with full web pages.
+- **Terminal**: Go `os/exec` package to safely run commands. Execution is gated by a `.whitelist` plaintext file (supporting gitignore-like wildcards) at the project root. The user is prompted to `run/auto/block` commands. "Auto" adds the command to the whitelist. Agent Smith parses and identifies chained commands (e.g., `&&`, `|`, `;`) to prevent unintentional auto-execution of rogue scripts.
+- **Web Search / Browser**: Uses `chromedp` (approved exception). Blocked by default and prompted for user permission. Once allowed, Agent Smith spawns a headless browser to interact with full web pages.
 
 ## Testing
 
 - **Unit Tests**: Standard `go test` for all public functions across all packages.
-- **Simulation Tests**: `chromedp`-based end-to-end tests that launch SmithAI, open the web UI in a headless browser, and exercise real user flows (submitting prompts, verifying streamed responses, testing consent dialogs).
+- **Simulation Tests**: `chromedp`-based end-to-end tests that launch Agent Smith, open the web UI in a headless browser, and exercise real user flows (submitting prompts, verifying streamed responses, testing consent dialogs).
 
 ## Why This Stack?
 
 This stack guarantees the project requirements are met:
 
 1. **Minimal External Dependencies**: Only four approved exceptions, each with clear justification. Promotes stability, security, and clean code.
-2. **Versatility**: The core logic resides in pure Go packages (`src/agent`) fully decoupled from the API or UI. The module is `smithai` — importable directly for IDE/TUI integration.
+2. **Versatility**: The core logic resides in pure Go packages (`src/agent`) fully decoupled from the API or UI. The module is `agentsmith` — importable directly for IDE/TUI integration.
 3. **Configurability**: Go's struct-based architecture makes it easy to pass settings down explicitly instead of relying on globals or environment variables scattered everywhere.

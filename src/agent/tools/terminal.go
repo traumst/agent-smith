@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os/exec"
 
+	"agentsmith/src/agent/consent"
+	"agentsmith/src/agent/protocol"
+
 	"github.com/kballard/go-shellquote"
-	"smithai/src/agent/consent"
-	"smithai/src/agent/protocol"
 )
 
 // RegisterTerminalTools registers the terminal_exec tool.

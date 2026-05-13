@@ -12,7 +12,7 @@ import (
 	serviceusage "google.golang.org/api/serviceusage/v1beta1"
 	"google.golang.org/genai"
 
-	"smithai/src/agent/availability"
+	"agentsmith/src/agent/availability"
 )
 
 // ModelTier holds information about a Gemini model tier.

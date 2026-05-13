@@ -1,4 +1,4 @@
-module smithai
+module agentsmith
 
 go 1.26
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"smithai/src/agent/consent"
-	"smithai/src/agent/protocol"
+	"agentsmith/src/agent/consent"
+	"agentsmith/src/agent/protocol"
 )
 
 // RegisterFSTools registers the fs_read and fs_write tools with the dispatcher.
@@ -34,7 +34,7 @@ func RegisterFSTools(d Dispatcher) {
 			return "", fmt.Errorf("path is required")
 		}
 
-		// Read is considered safe enough not to require consent in this phase, 
+		// Read is considered safe enough not to require consent in this phase,
 		// but we could add it if desired.
 		data, err := os.ReadFile(path)
 		if err != nil {

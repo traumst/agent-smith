@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	"smithai/src/agent/protocol"
+	"agentsmith/src/agent/protocol"
 )
 
 // Settings encapsulates the overall configuration for the agent.
 type Settings struct {
-	ActiveModel  string                `json:"activeModel"`
-	SystemPrompt protocol.SystemPrompt `json:"systemPrompt"`
+	ActiveModel          string                `json:"activeModel"`
+	SystemPrompt         protocol.SystemPrompt `json:"systemPrompt"`
 	GeminiRPM            int                   `json:"geminiRPM"`
 	ModelRefreshInterval string                `json:"modelRefreshInterval"`
 }
@@ -63,11 +63,11 @@ func DefaultSettings() *Settings {
 	return &Settings{
 		ActiveModel: "gemini-2.0-flash",
 		SystemPrompt: protocol.SystemPrompt{
-			Competence:   "You are an expert, helpful AI assistant named Smith.",
+			Competence:   "You are an expert, helpful AI assistant named Agent Smith.",
 			Mood:         "Direct, concise, and professional.",
 			Instructions: "Prioritize answering the user's questions clearly.",
 		},
-		GeminiRPM: 5,
+		GeminiRPM:            5,
 		ModelRefreshInterval: "1:0:0.000",
 	}
 }

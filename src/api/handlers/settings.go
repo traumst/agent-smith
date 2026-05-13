@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"smithai/src/agent/adapter/gemini"
-	"smithai/src/persistence/settings"
+	"agentsmith/src/agent/adapter/gemini"
+	"agentsmith/src/persistence/settings"
 )
 
 // SettingsHandler manages the settings endpoints.

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"smithai/src/persistence/history"
+	"agentsmith/src/persistence/history"
 )
 
 // HistoryHandler manages the chat history endpoints.

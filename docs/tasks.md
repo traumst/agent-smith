@@ -1,4 +1,4 @@
-# SmithAI Implementation Tasks
+# Agent Smith Implementation Tasks
 
 This document breaks down the development plan into actionable steps across 6 phases. Each step focuses on implementing a vertical slice and wiring it up immediately to ensure end-to-end functionality, keeping in mind the Grug Brained Dev rule: favor simplicity, no over-architecting, and prioritize the standard library.
 
@@ -6,7 +6,7 @@ This document breaks down the development plan into actionable steps across 6 ph
 
 ### Step 1.1: Initialization & Protocol Types
 
-- [x] Initialize Go module (`go mod init smithai`).
+- [x] Initialize Go module (`go mod init agentsmith`).
 - [x] Create initial folder structure (`src/agent/protocol`, `src/persistence`).
 - [x] Define core protocol types in `src/agent/protocol` (e.g. `Request`, `Response`, `SystemPrompt`, `FileDelta`, `ToolDef`, `ToolCall`).
 - [x] **Wiring:** Create a minimal `main.go` that imports these types and prints a dummy request to verify the build.

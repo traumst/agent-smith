@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"smithai/src/agent/adapter/gemini"
-	"smithai/src/agent/protocol"
-	"smithai/src/persistence/history"
-	"smithai/src/persistence/settings"
+	"agentsmith/src/agent/adapter/gemini"
+	"agentsmith/src/agent/protocol"
+	"agentsmith/src/persistence/history"
+	"agentsmith/src/persistence/settings"
 	"encoding/json"
 )
 

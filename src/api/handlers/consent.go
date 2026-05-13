@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"smithai/src/agent/consent"
+	"agentsmith/src/agent/consent"
 )
 
 // ConsentHandler handles consent responses from the web UI.

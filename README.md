@@ -1,7 +1,7 @@
-# SmithAI
+# Agent Smith
 
-SmithAI is a simple, powerful agentic AI assistant built in Go.
-It uses the Gemini API for reasoning and includes a suite of local tools
+Agent Smith is a simple, powerful agentic AI assistant built in Go.
+Agent Smith uses the Gemini API for reasoning and includes a suite of local tools
 for interacting with your file system, terminal, and the web.
 
 ## Features
@@ -18,7 +18,7 @@ for interacting with your file system, terminal, and the web.
 
 ## Architecture
 
-SmithAI is organized into four distinct layers:
+Agent Smith is organized into four distinct layers:
 
 1.  **Persistence Layer (`src/persistence`)**: Handles SQLite (history, settings, logs) and file-based long-term memory.
 2.  **Agent Layer (`src/agent`)**: The core reasoning loop, Gemini adapter, and tool dispatcher.
@@ -56,7 +56,7 @@ Settings are stored in `data/settings.json`. They are automatically created with
 
 | Field                  | Description                                                         | Default                   |
 | :--------------------- | :------------------------------------------------------------------ | :------------------------ |
-| `systemPrompt`         | The personality and instructions for the agent.                     | Expert, helpful, concise. |
+| `systemPrompt`         | The personality and instructions for Agent Smith.                  | Expert, helpful, concise. |
 | `geminiRPM`            | Rate limit for Gemini API requests (0 for no limit).                | `5`                       |
 | `modelRefreshInterval` | How often to refresh available model list from Gemini (`H:M:S.ms`). | `1:0:0.000` (1 hour)      |
 
@@ -67,7 +67,7 @@ Settings are stored in `data/settings.json`. They are automatically created with
 
 ### Control Files
 
-SmithAI uses simple files for state.
+Agent Smith uses simple files for state.
 No complex database for rules.
 
 #### Consent (.whitelist / .blacklist)

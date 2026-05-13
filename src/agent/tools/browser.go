@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"smithai/src/agent/consent"
-	"smithai/src/agent/protocol"
+	"agentsmith/src/agent/consent"
+	"agentsmith/src/agent/protocol"
 
 	"github.com/chromedp/chromedp"
 )

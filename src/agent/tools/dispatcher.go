@@ -1,12 +1,11 @@
 package tools
 
 import (
+	"agentsmith/src/agent/availability"
+	"agentsmith/src/agent/protocol"
 	"context"
 	"fmt"
-	"smithai/src/agent/availability"
-	"smithai/src/agent/protocol"
 )
-
 
 // Dispatcher manages available tools and handles executing them.
 type Dispatcher interface {
@@ -62,4 +61,3 @@ func (d *BasicDispatcher) Definitions() []protocol.ToolDef {
 	}
 	return defs
 }
-

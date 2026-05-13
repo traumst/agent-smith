@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"smithai/src/agent/protocol"
+	"agentsmith/src/agent/protocol"
 )
 
 // CreateTable initializes the chat_history table.
@@ -104,19 +104,19 @@ func ListSessions(db *sql.DB, limit, offset int) ([]SessionSummary, error) {
 		if err := rows.Scan(&s.SessionID, &createdAt, &s.MessageCount, &s.FirstMessage); err != nil {
 			return nil, fmt.Errorf("failed to scan session summary: %w", err)
 		}
-		
+
 		// Parse sqlite datetime string
 		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
 			s.CreatedAt = t
 		} else if t, err := time.Parse(time.RFC3339, createdAt); err == nil {
 			s.CreatedAt = t
 		}
-		
+
 		// Truncate first message for display
 		if len(s.FirstMessage) > 50 {
 			s.FirstMessage = s.FirstMessage[:47] + "..."
 		}
-		
+
 		sessions = append(sessions, s)
 	}
 

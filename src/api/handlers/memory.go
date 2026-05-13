@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"smithai/src/persistence/memory"
+	"agentsmith/src/persistence/memory"
 )
 
 // MemoryHandler manages long-term memory endpoints.
