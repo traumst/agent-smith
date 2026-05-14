@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: build ${{ matrix.goos }} ${{ matrix.goarch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            binary_name: agent-smith-linux-amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            binary_name: agent-smith-windows-amd64.exe
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            binary_name: agent-smith-macos-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: set up go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: build
+        run: |
+          go build -v -o ${{ matrix.binary_name }} .
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: ${{ matrix.binary_name }}
+
+  release:
+    name: create release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: binaries
+
+      - name: publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: binaries/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
