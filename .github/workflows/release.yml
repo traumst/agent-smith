@@ -4,10 +4,68 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "version number (e.g., v1.1.1)"
+        required: true
+        type: string
 
 jobs:
+  check-version:
+    name: check and update version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: get version
+        id: get-version
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          if [ -z "$VERSION" ]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: validate and update version.history
+        run: |
+          NEW_VER="${{ steps.get-version.outputs.version }}"
+          # remove 'v' for comparison
+          NEW_VER_NUM=${NEW_VER#v}
+
+          LAST_LINE=$(tail -n 1 version.history || echo "0.0.0,")
+          LAST_VER=$(echo $LAST_LINE | cut -d',' -f1)
+          LAST_VER_NUM=${LAST_VER#v}
+
+          echo "New version: $NEW_VER_NUM"
+          echo "Last version: $LAST_VER_NUM"
+
+          # simple check: if versions are same, or new is not "greater" (very basic check)
+          # for real semver comparison, we'd need a tool, but grug use basic string sort if same length
+          # or just check if it's already in the file
+          if grep -q "^$NEW_VER," version.history; then
+            echo "Version $NEW_VER already exists in history!"
+            exit 1
+          fi
+
+          # append new version
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "$NEW_VER,$TIMESTAMP" >> version.history
+
+          # commit back to branch if not a tag push (or even if it is, if we want history updated)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.history
+          git commit -m "chore: update version.history to $NEW_VER"
+          git push origin HEAD:${{ github.ref }}
+
   build:
     name: build ${{ matrix.goos }} ${{ matrix.goarch }}
+    needs: check-version
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -49,7 +107,7 @@ jobs:
 
   release:
     name: create release
-    needs: build
+    needs: [build, check-version]
     runs-on: ubuntu-latest
     steps:
       - name: download artifacts
@@ -61,6 +119,8 @@ jobs:
       - name: publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.check-version.outputs.version }}
+          name: Release ${{ needs.check-version.outputs.version }}
           files: binaries/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
