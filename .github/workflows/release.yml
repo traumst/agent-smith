@@ -11,17 +11,17 @@ on:
         required: true
         type: string
 
+# Enforce least-privilege permissions
+permissions:
+  contents: write
+
 jobs:
-  check-version:
-    name: check and update version
+  prepare-release:
+    name: Determine Version
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: get version
         id: get-version
         run: |
@@ -29,43 +29,11 @@ jobs:
           if [ -z "$VERSION" ]; then
             VERSION=${GITHUB_REF#refs/tags/}
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: validate and update version.history
-        run: |
-          NEW_VER="${{ steps.get-version.outputs.version }}"
-          # remove 'v' for comparison
-          NEW_VER_NUM=${NEW_VER#v}
-
-          LAST_LINE=$(tail -n 1 version.history || echo "0.0.0,")
-          LAST_VER=$(echo $LAST_LINE | cut -d',' -f1)
-          LAST_VER_NUM=${LAST_VER#v}
-
-          echo "New version: $NEW_VER_NUM"
-          echo "Last version: $LAST_VER_NUM"
-
-          # simple check: if versions are same, or new is not "greater" (very basic check)
-          # for real semver comparison, we'd need a tool, but grug use basic string sort if same length
-          # or just check if it's already in the file
-          if grep -q "^$NEW_VER," version.history; then
-            echo "Version $NEW_VER already exists in history!"
-            exit 1
-          fi
-
-          # append new version
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "$NEW_VER,$TIMESTAMP" >> version.history
-
-          # commit back to branch if not a tag push (or even if it is, if we want history updated)
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.history
-          git commit -m "chore: update version.history to $NEW_VER"
-          git push origin HEAD:${{ github.ref }}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   build:
     name: build ${{ matrix.goos }} ${{ matrix.goarch }}
-    needs: check-version
+    needs: prepare-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -92,35 +60,48 @@ jobs:
           go-version: "1.26"
           cache: true
 
+      # Linux requires specific GTK dependencies for GUI compilation
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      # Replace with 'go install github.com/wailsapp/wails/v2/cmd/wails@latest' if using v2
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails@latest
+
+      # Use wails build instead of go build to ensure assets are bundled
       - name: build
         run: |
-          go build -v -o ${{ matrix.binary_name }} .
+          wails build -platform ${{ matrix.goos }}/${{ matrix.goarch }} -o ${{ matrix.binary_name }}
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
 
+      # v4 requires unique artifact names per concurrent job
       - name: upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
-          path: ${{ matrix.binary_name }}
+          name: binary-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/bin/${{ matrix.binary_name }} # Adjust path to wherever your build tool outputs
 
   release:
     name: create release
-    needs: [build, check-version]
+    needs: [build, prepare-release]
     runs-on: ubuntu-latest
     steps:
+      # Download all artifacts matching the pattern and merge them into one directory
       - name: download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: binaries
+          pattern: binary-*
           path: binaries
+          merge-multiple: true
 
       - name: publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.check-version.outputs.version }}
-          name: Release ${{ needs.check-version.outputs.version }}
+          tag_name: ${{ needs.prepare-release.outputs.version }}
+          name: Release ${{ needs.prepare-release.outputs.version }}
           files: binaries/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
