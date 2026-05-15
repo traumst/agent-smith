@@ -15,9 +15,9 @@ this refresh should still be limited to once every 5 minutes on the back end. re
 ## auto-swap to available models
 
 if model is exhausted, we should automatically swap to the next available model in the .available list.
-once exhausted it should be moved from .available to .unavailable list.
+exhausted models should be moved from .available to .unavailable list.
 then, we should change the active model to the next preference according to '.modelorder'.
-after we exhaust the list of preferred models, we should just proceed trying next arbitrary model to proceed.
+after we exhaust the list of all available preferred models, we should try to use another arbitrary model to proceed.
 if all models are exhausted - we should display that in the model selection dropdown.
 
 ## delete message
@@ -28,25 +28,41 @@ we should ask to confirm the deletion like we do for chats.
 
 ## handle consecutive messages from user or LLM
 
-if we have 2 or more consecutive messages from either user or the LLM, we should merge them into a single message, when passed to the model.
+The models expect pre-defined structure to in converstation.
+Specifically, they demand a strict user->assistant alternating sequence.
+if we have 2 or more consecutive messages from either user or the LLM, we should merge them into a single message in chat history.
+This merge should only be reflected in the history passed to the model, not in the UI.
 
 ## stop current working/thinking
 
-while agent is responding, "send" button should be "stop" instead.
+alow users to cancel current request and drop the partial response from history.
+while agent is responding, "send" button should become "stop" instead.
 clicking "stop" should allow user to stop current request from proceeding.
 ensure both client and backend handle this gracefully.
+once model has responded fully, "stop" should turn back to "send".
 
-## token burn stats
+## display token burn stats
 
-add footer to display lifetime / monthly / weekly / daily / hourly token burn.
-we should collect this data and display that on UI.
-we already count how much token each request and response cost aproximately.
-we should start an appent-only table that stores lifetime token spend as a series of entries.
-one entry per request + response.
+we already count how much tokens each request and response cost aproximately.
+we should create appent-only tables that store token spend as a series of entries.
+hourly table should have two entries for request and response tokens.
 each entry should mention:
 
-- iso8601 timestamp
-- model used
-- input token count
-- output token count
-- total token count
+- iso8601 timestamp - when record was inserted
+- model used - 1-to-1 as in .available file
+- input token count - tokens burned in request to LLM
+- output token count - tokens burned in response from LLM
+- total token count - total tokens burned in request-response cycle
+
+we should collect lifetime / monthly / weekly / daily / hourly token usage data to inform the user about their usage.
+create dedicated 'burn' table for each of these time periods: lifetime / monthly / weekly / daily / hourly.
+hourly should be appended with each request/response cycle, as two entries: one for request tokens, one for response tokens.
+data for longer periods should be aggregated from the shorter:
+daily from houry, weekly from daily, monthly from weekly, lifetime from monthly.
+we want to keep in-memory estimation and update it with actual data from DB whenever needed.
+
+each time we aggregate data from smaller time period into larger one, we should drop the data for smaller time period from its table.
+
+add footer on UI to display lifetime / monthly / weekly / daily / hourly token burn.
+
+##
